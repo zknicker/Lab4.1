@@ -5,11 +5,7 @@
 #include <math.h>
 #include <vector>
 
-#include <GL/glew.h>
-#include <GL/glut.h>
-#include <glm/glm.hpp>
-#include <glm/ext.hpp>
-
+#include "platform.h"
 #include "shader_utils.h"
 
 using namespace std;
@@ -166,6 +162,9 @@ void setupPhongShader(PhongShader* phong_shader) {
 	phong_shader->specularPowerId = glGetUniformLocation(phong_shader->program, "specular_power");
 	phong_shader->use_texture_id = glGetUniformLocation(phong_shader->program, "use_texture");
 	phong_shader->tex_one_sampler = glGetUniformLocation(phong_shader->program, "tex_one_sampler");
+    
+    // Default is 0, AKA no texture.
+    glUniform1i(phong_shader->use_texture_id, 0);
 }
 
 /* Quick and easy method to initialize a shadow shader. Takes care of 

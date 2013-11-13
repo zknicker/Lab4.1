@@ -24,11 +24,7 @@
 #include <fstream>
 #include <sstream>
 
-#include <GL/glew.h> // includes gl.h
-#include <GL/glut.h>
-#include <glm/glm.hpp>
-#include <glm/ext.hpp>
-
+#include "platform.h"
 #include "shader_utils.h"
 #include "obj_utils.h"
 #include "primitives.h"
@@ -73,6 +69,9 @@ void initObj(string obj_path) {
 /* Draws the desired model (.obj).
  * -------------------------------------------------------------------------- */
 void drawObj(bool shadow) {
+    
+    GLuint c0, c1, c2;
+    
 	// Matrices
 	scene.model = glm::scale(scene.model, vec3(0.1, 0.1, 0.1));
 	
@@ -83,27 +82,37 @@ void drawObj(bool shadow) {
 		glUniform3f(scene.phong_shader.specularMatId, 0.3, 0.3, 0.3);
 		glUniform1f(scene.phong_shader.specularPowerId, 5);
 		glUniform1i(scene.phong_shader.use_texture_id, 0);
-		glUniform3f(scene.phong_shader.lightId, scene.light_pos.x, scene.light_pos.y, scene.light_pos.z);
 		updatePhongShader(&scene);
+        
+        c0 = glGetAttribLocation(scene.phong_shader.program, "vertex_model");
+        c1 = glGetAttribLocation(scene.phong_shader.program, "normal_model");
+        c2 = glGetAttribLocation(scene.phong_shader.program, "tex_coord");
 
 	} else {
 		glUseProgram(scene.shadow_shader.program);
-		glUniform3f(scene.shadow_shader.lightId, scene.light_pos.x, scene.light_pos.y, scene.light_pos.z);
 		updateShadowShader(&scene);
+        
+        c0 = glGetAttribLocation(scene.shadow_shader.program, "vertex_model");
+        c1 = glGetAttribLocation(scene.shadow_shader.program, "normal_model");
+        c2 = glGetAttribLocation(scene.shadow_shader.program, "tex_coord");
 	}
 	
 	// Drawing
     glBindBuffer(GL_ARRAY_BUFFER, obj_buffer);
     glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
+    glVertexAttribPointer(c0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
+    glVertexAttribPointer(c1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
+    glVertexAttribPointer(c2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)48); // Texture Coords
 
-    glDrawArrays(GL_TRIANGLES, 0, obj.size());
+    int size = (int) obj.size();
+    glDrawArrays(GL_TRIANGLES, 0, size);
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
 }
 
 /* Main animation function. Draws the screen.
@@ -133,10 +142,6 @@ void display(void) {
 	stack<mat4> model_stack;
 	model_stack.push(scene.model);
 
-	glEnable(GL_STENCIL_TEST); 
-	glStencilFunc(GL_ALWAYS, 1, ~0); 
-	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-
 	// Draw trackball rotation.
 	scene.model = scene.model * trackball.trackball_rot;
 	model_stack.push(scene.model);
@@ -155,8 +160,12 @@ void display(void) {
 	}
 
 	glEnable(GL_POLYGON_OFFSET_FILL); // fight the z (z-fighting fix)!
-	glPolygonOffset(1,1); 
-
+	glPolygonOffset(1,1);
+    
+	glEnable(GL_STENCIL_TEST);
+	glStencilFunc(GL_ALWAYS, 1, ~0);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+    
 	// Draw ground.
 	scene.model = glm::scale(scene.model, vec3(10.0, 0.1, 10.0));
 	scene.model = glm::translate(scene.model, vec3(0.0, -0.5f, 0.0));
@@ -165,7 +174,7 @@ void display(void) {
 	
 	glDisable(GL_POLYGON_OFFSET_FILL);
 	glDisable(GL_STENCIL_TEST);
-	
+    
 	// Global transform all objects upward.
 	scene.model = glm::translate(scene.model, vec3(0.0, 0.8, 0.0));
 	model_stack.push(scene.model);
@@ -187,8 +196,8 @@ void display(void) {
 
 	// Draw shadows.
 	if (draw_shadows) {
-		glEnable(GL_STENCIL_TEST); 
-		glStencilFunc(GL_EQUAL, 1, ~0); 
+		glEnable(GL_STENCIL_TEST);
+		glStencilFunc(GL_EQUAL, 1, ~0);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
 		glEnable(GL_BLEND);
@@ -308,9 +317,9 @@ void getObjectClicked(int x, int y) {
 void mouseController(int button, int state, int x, int y) {
 	if(button==GLUT_LEFT_BUTTON) {
 		if (state == GLUT_DOWN) {
-			//press_x = x; press_y = y;
-			//mapToTrackball(x, y, window_size, last_pos);
-			getObjectClicked(x, y);
+			press_x = x; press_y = y;
+			mapToTrackball(x, y, window_size, last_pos);
+			//getObjectClicked(x, y); //for later implementation of relocatable trackball
 		}
 	}
 }
@@ -318,7 +327,7 @@ void mouseController(int button, int state, int x, int y) {
 /* Responses to mouse movement events.
  * -------------------------------------------------------------------------- */
 void motionController(int x, int y) {
-	//updateTrackball(x, y, window_size, last_pos, &trackball);
+	updateTrackball(x, y, window_size, last_pos, &trackball);
 }
 
 /* Responses to keyboard key down events.
@@ -353,6 +362,10 @@ int main(int argc, char **argv) {
 	cout << "----------------------------------------\n";
 	checkGraphics();
 	cout << "\n----------------------------------------\n";
+    char buffer[1000];
+    cout << "Current working directory is: " << getcwd(buffer, 1000) << "\n";
+    cout << "Make sure that the relevant file dependencies are included here.\n";
+	cout << "\n----------------------------------------\n";
 	cout << "Initializing application.\n";
 
 	glutDisplayFunc(display);
@@ -374,7 +387,7 @@ int main(int argc, char **argv) {
 	initObj("pumpkin.obj");
 
 	// Setup the shaders.
-	cout << "Initializing phong shdaer... ";
+	cout << "Initializing phong shader... ";
 	setupPhongShader(&scene.phong_shader);
 	cout << "Initializing shadow shader... ";
 	setupShadowShader(&scene.shadow_shader);

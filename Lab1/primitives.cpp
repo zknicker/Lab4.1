@@ -1,4 +1,3 @@
-#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stack> 
@@ -6,11 +5,7 @@
 #include <iostream>
 #include <vector>
 
-#include <GL/glew.h> // includes gl.h
-#include <GL/glut.h>
-#include <glm/glm.hpp>
-#include <glm/ext.hpp>
-
+#include "platform.h"
 #include "primitives.h"
 #include "shader_utils.h"
 
@@ -51,7 +46,7 @@ void initPrimitives()
 	glBindBuffer(GL_ARRAY_BUFFER, primitives[2]);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * CYLINDER_SLICES * CYLINDER_STACKS, cylinder, GL_STATIC_DRAW);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, primitives[3]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * CYLINDER_SLICES * CYLINDER_STACKS * 6, cylinder_indices, GL_STATIC_DRAW);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * CYLINDER_INDICES, cylinder_indices, GL_STATIC_DRAW);
 
 	// Copy sphere verts, indices to video card.
 	glBindBuffer(GL_ARRAY_BUFFER, primitives[4]);
@@ -68,7 +63,6 @@ void initPrimitives()
  * -------------------------------------------------------------------------- */
 void initCube() {
 	float half_cube_size = CUBE_SIZE / 2.0;
-	float normalized_normal = 1.0 / sqrt(3);
 
 	cube[0].point[0] = -half_cube_size;		cube[0].point[1] = -half_cube_size;		cube[0].point[2] = -half_cube_size;		cube[0].point[3] = 1; // Back Lower Left
 	cube[1].point[0] = -half_cube_size;		cube[1].point[1] = -half_cube_size;		cube[1].point[2] = half_cube_size;		cube[1].point[3] = 1; // Front Lower Left
@@ -99,14 +93,14 @@ void initCube() {
 	cube[6].color[0] = 0;	cube[6].color[1] = 1;	cube[6].color[2] = 0;	cube[6].color[3] = 1;
 	cube[7].color[0] = 0;	cube[7].color[1] = 0;	cube[7].color[2] = 1;	cube[7].color[3] = 1;
 
-	cube[0].texcoord[0] = 0;	cube[0].texcoord[1] = 1;
-	cube[1].texcoord[0] = 0;	cube[1].texcoord[1] = 0;
-	cube[2].texcoord[0] = 0;	cube[2].texcoord[1] = 1;
-	cube[3].texcoord[0] = 0;	cube[3].texcoord[1] = 0;
-	cube[4].texcoord[0] = 1;	cube[4].texcoord[1] = 1;
-	cube[5].texcoord[0] = 1;	cube[5].texcoord[1] = 0;
-	cube[6].texcoord[0] = 1;	cube[6].texcoord[1] = 1;
-	cube[7].texcoord[0] = 1;	cube[7].texcoord[1] = 0;
+	cube[0].texcoord[0] = 1;	cube[0].texcoord[1] = 1;
+	cube[1].texcoord[0] = 1;	cube[1].texcoord[1] = 0;
+	cube[2].texcoord[0] = 1;	cube[2].texcoord[1] = 1;
+	cube[3].texcoord[0] = 1;	cube[3].texcoord[1] = 0;
+	cube[4].texcoord[0] = 0;	cube[4].texcoord[1] = 1;
+	cube[5].texcoord[0] = 0;	cube[5].texcoord[1] = 0;
+	cube[6].texcoord[0] = 0;	cube[6].texcoord[1] = 1;
+	cube[7].texcoord[0] = 0;	cube[7].texcoord[1] = 0;
 
 	cube_indices[0] = 2;	cube_indices[1] = 3;	cube_indices[2] = 7;	cube_indices[3] = 6; // Top Face
 	cube_indices[4] = 0;	cube_indices[5] = 1;	cube_indices[6] = 5;	cube_indices[7] = 4; // Bottom Face
@@ -127,6 +121,8 @@ void drawCube(Scene *scene, bool shadow, bool texture) {
  * -------------------------------------------------------------------------- */
 void drawCube(Scene *scene, Color *color, bool shadow, bool texture) {
 	
+    GLuint c0, c1, c2;
+    
 	if (!shadow) {
 		glUniform3f(scene->phong_shader.ambientMatId, 0, 0, 0.2);
 		glUniform3f(scene->phong_shader.diffuseMatId, 0, 0, 0.7);
@@ -135,10 +131,18 @@ void drawCube(Scene *scene, Color *color, bool shadow, bool texture) {
 		if (texture) glUniform1i(scene->phong_shader.use_texture_id, 1);
 		else glUniform1i(scene->phong_shader.use_texture_id, 0);
 		updatePhongShader(scene);
+        
+        c0 = glGetAttribLocation(scene->phong_shader.program, "vertex_model");
+        c1 = glGetAttribLocation(scene->phong_shader.program, "normal_model");
+        c2 = glGetAttribLocation(scene->phong_shader.program, "tex_coord");
 
 	} else {
 		glUseProgram(scene->shadow_shader.program);
 		updateShadowShader(scene);
+        
+        c0 = glGetAttribLocation(scene->shadow_shader.program, "vertex_model");
+        c1 = glGetAttribLocation(scene->shadow_shader.program, "normal_model");
+        c2 = glGetAttribLocation(scene->shadow_shader.program, "tex_coord");
 	}
 
 	// Bind cube buffers.
@@ -149,9 +153,9 @@ void drawCube(Scene *scene, Color *color, bool shadow, bool texture) {
 	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)48); // Texture Coords
+    glVertexAttribPointer(c0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
+    glVertexAttribPointer(c1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
+    glVertexAttribPointer(c2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)48); // Texture Coords
 
     // Draw the cube.
 	glDrawElements(GL_QUADS, CUBE_INDICES, GL_UNSIGNED_SHORT, (char*) NULL + 0);
@@ -275,6 +279,8 @@ void drawCylinder(Scene *scene, bool shadow) {
 }
 void drawCylinder(Scene *scene, Color *color, bool shadow) {
 	
+    GLuint c0, c1, c2;
+    
 	if (!shadow) {
 		glUniform3f(scene->phong_shader.ambientMatId, 0, 0.2, 0);
 		glUniform3f(scene->phong_shader.diffuseMatId, 0, 0.7, 0);
@@ -282,10 +288,18 @@ void drawCylinder(Scene *scene, Color *color, bool shadow) {
 		glUniform1f(scene->phong_shader.specularPowerId, 5);
 		glUniform1i(scene->phong_shader.use_texture_id, 0);
 		updatePhongShader(scene);
+        
+        c0 = glGetAttribLocation(scene->phong_shader.program, "vertex_model");
+        c1 = glGetAttribLocation(scene->phong_shader.program, "normal_model");
+        c2 = glGetAttribLocation(scene->phong_shader.program, "tex_coord");
 
 	} else {
 		glUseProgram(scene->shadow_shader.program);
 		updateShadowShader(scene);
+        
+        c0 = glGetAttribLocation(scene->shadow_shader.program, "vertex_model");
+        c1 = glGetAttribLocation(scene->shadow_shader.program, "normal_model");
+        c2 = glGetAttribLocation(scene->shadow_shader.program, "tex_coord");
 	}
 
 	// Bind cube buffers.
@@ -294,15 +308,18 @@ void drawCylinder(Scene *scene, Color *color, bool shadow) {
 	
     glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
+	glEnableVertexAttribArray(2);
+    
+    glVertexAttribPointer(c0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
+    glVertexAttribPointer(c1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
+    glVertexAttribPointer(c2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)48); // Texture
 	
 	// Draw the cylinder.
 	glDrawElements(GL_TRIANGLES, CYLINDER_INDICES, GL_UNSIGNED_SHORT, (char*) NULL + 0);
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
 
 	// Unbind buffers.
 	glBindBuffer(GL_ARRAY_BUFFER, 0); 
@@ -369,6 +386,8 @@ void drawSphere(Scene *scene, bool shadow) {
  * -------------------------------------------------------------------------- */
 void drawSphere(Scene *scene, Color *color, bool shadow) {
 
+    GLuint c0, c1, c2;
+    
 	if (!shadow) {
 		glUseProgram(scene->phong_shader.program);
 		glUniform3f(scene->phong_shader.ambientMatId, 0, 0.2, 0.2);
@@ -377,10 +396,18 @@ void drawSphere(Scene *scene, Color *color, bool shadow) {
 		glUniform1f(scene->phong_shader.specularPowerId, 5);
 		glUniform1i(scene->phong_shader.use_texture_id, 0);
 		updatePhongShader(scene);
+        
+        c0 = glGetAttribLocation(scene->phong_shader.program, "vertex_model");
+        c1 = glGetAttribLocation(scene->phong_shader.program, "normal_model");
+        c2 = glGetAttribLocation(scene->phong_shader.program, "tex_coord");
 
 	} else {
 		glUseProgram(scene->shadow_shader.program);
 		updateShadowShader(scene);
+        
+        c0 = glGetAttribLocation(scene->shadow_shader.program, "vertex_model");
+        c1 = glGetAttribLocation(scene->shadow_shader.program, "normal_model");
+        c2 = glGetAttribLocation(scene->shadow_shader.program, "tex_coord");
 	}
 
 	// Bind cube buffers.
@@ -389,15 +416,18 @@ void drawSphere(Scene *scene, Color *color, bool shadow) {
 	
     glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
+	glEnableVertexAttribArray(2);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
+    glVertexAttribPointer(c0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
+    glVertexAttribPointer(c1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
+    glVertexAttribPointer(c2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)48); // Texture
 	
 	// Draw the cylinder.
 	glDrawElements(GL_QUADS, SPHERE_INDICES, GL_UNSIGNED_SHORT, (char*) NULL + 0);
 
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
+    glDisableVertexAttribArray(2);
 
 	// Unbind buffers.
 	glBindBuffer(GL_ARRAY_BUFFER, 0); 

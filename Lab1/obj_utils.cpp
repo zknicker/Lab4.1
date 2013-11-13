@@ -7,11 +7,7 @@
 #include <fstream>
 #include <sstream>
 
-#include <GL/glew.h> // includes gl.h
-#include <GL/glut.h>
-#include <glm/glm.hpp>
-#include <glm/ext.hpp>
-
+#include "platform.h"
 #include "obj_utils.h"
 
 using namespace std;

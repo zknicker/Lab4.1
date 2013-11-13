@@ -2,9 +2,7 @@
 #include <stdlib.h>
 #include <math.h>
 
-#include <glm/glm.hpp>
-#include <glm/ext.hpp>
-
+#include "platform.h"
 #include "trackball.h"
 
 #define PI 3.141592653589793
