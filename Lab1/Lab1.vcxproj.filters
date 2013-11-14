@@ -30,6 +30,9 @@
     <ClInclude Include="trackball.h">
       <Filter>Source Files</Filter>
     </ClInclude>
+    <ClInclude Include="platform.h">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="primitives.cpp">

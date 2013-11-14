@@ -70,6 +70,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="obj_utils.h" />
+    <ClInclude Include="platform.h" />
     <ClInclude Include="primitives.h" />
     <ClInclude Include="robot.h" />
     <ClInclude Include="shader_utils.h" />
