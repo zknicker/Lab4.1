@@ -81,10 +81,6 @@ void initCube();
  * -------------------------------------------------------------------------- */
 void drawCube(Scene *scene, bool shadow, bool texture);
 
-/* Draw Cube - draws a cube with some specified solid color.
- * -------------------------------------------------------------------------- */
-void drawCube(Scene *scene, Color *color, bool shadow, bool texture);
-
 /* Initalize Cylinder - initializes cylinder vertices, colors, and indices.
  * -------------------------------------------------------------------------- */
 void initCylinder();

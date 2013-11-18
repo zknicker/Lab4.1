@@ -8,6 +8,7 @@
 #include "platform.h"
 #include "primitives.h"
 #include "shader_utils.h"
+#include "normal_utils.h"
 
 Vertex cube[CUBE_VERTICES];
 GLushort cube_indices[CUBE_INDICES];
@@ -110,18 +111,16 @@ void initCube() {
 	cube_indices[20] = 4;	cube_indices[21] = 5;	cube_indices[22] = 7;	cube_indices[23] = 6; // Right Face
 }
 
-/* Draw Cube - draws a cube.
- * -------------------------------------------------------------------------- */
-void drawCube(Scene *scene, bool shadow, bool texture) {
-	drawCube(scene, NULL, shadow, texture);
-}
-
 /* Draw Cube - draws a cube. Takes a Color parameter to draw the object as 
  * a solid color.
  * -------------------------------------------------------------------------- */
-void drawCube(Scene *scene, Color *color, bool shadow, bool texture) {
+void drawCube(Scene *scene, bool shadow, bool texture) {
 	
     GLuint c0, c1, c2;
+    
+    Object cubeObject;
+    cubeObject.ambient_mat[0] = 0.0; cubeObject.ambient_mat[0] = 0.0; cubeObject.ambient_mat[0] = 0.2;
+    
     
 	if (!shadow) {
 		glUniform3f(scene->phong_shader.ambientMatId, 0, 0, 0.2);
@@ -152,7 +151,22 @@ void drawCube(Scene *scene, Color *color, bool shadow, bool texture) {
     glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
-
+    
+    vector<glm::vec3> vertices, normals;
+    vector<glm::vec2> uvs;
+    vertices.resize(CUBE_VERTICES);
+    normals.resize(CUBE_VERTICES);
+    uvs.resize(8);
+    for(int i = 0; i < CUBE_VERTICES; i++) {
+        vertices[i] = vec3(cube[i].point[0], cube[i].point[1], cube[i].point[2]);
+        normals[i] = vec3(cube[i].normal[0], cube[i].normal[1], cube[i].normal[2]);
+        uvs[i] = vec2(cube[i].texcoord[0], cube[i].texcoord[1]);
+    }
+    
+    vector<glm::vec3> tangents;
+    vector<glm::vec3> bitangents;
+    //computeTangentBasis(vertices, uvs, normals, tangents, bitangents);
+    
     glVertexAttribPointer(c0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
     glVertexAttribPointer(c1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
     glVertexAttribPointer(c2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)48); // Texture Coords
@@ -174,7 +188,10 @@ void drawCube(Scene *scene, Color *color, bool shadow, bool texture) {
  * -------------------------------------------------------------------------- */
 void drawObject(Scene *scene, Object *object, int shader) {
 	
+    GLuint program, verticesId, normalsId, textureCoordsId;
+    
 	if (shader == PHONG_SHADER) {
+        program = scene->phong_shader.program;
 		glUniform3f(scene->phong_shader.ambientMatId, object->ambient_mat[0], object->ambient_mat[1], object->ambient_mat[2]);
 		glUniform3f(scene->phong_shader.diffuseMatId, object->diffuse_mat[0], object->diffuse_mat[1], object->diffuse_mat[2]);
 		glUniform3f(scene->phong_shader.specularMatId, object->specular_mat[0], object->specular_mat[1], object->specular_mat[2]);
@@ -183,18 +200,27 @@ void drawObject(Scene *scene, Object *object, int shader) {
 		updatePhongShader(scene);
 
 	} else if (shader == SHADOW_SHADER) {
-		glUseProgram(scene->shadow_shader.program);
+		program = scene->shadow_shader.program;
 		updateShadowShader(scene);
 
 	} else if (shader == PICKER_SHADER) {
+        program = scene->picking_shader.program;
 		int r = (object->id & 0x000000FF) >>  0;
 		int g = (object->id & 0x0000FF00) >>  8;
 		int b = (object->id & 0x00FF0000) >> 16;
 		glUniform3f(scene->phong_shader.ambientMatId, r, g, b);
 		updatePickingShader(scene);
-	}
+	} else {
+        cout << "Fatal error: invalid shader specified while drawing object.";
+        exit(1);
+    }
+    
+    glUseProgram(program);
+    verticesId = glGetAttribLocation(program, "vertex_model");
+    normalsId = glGetAttribLocation(program, "normal_model");
+    textureCoordsId = glGetAttribLocation(program, "tex_coord");
 
-	// Bind cube buffers.
+	// Bind buffers.
 	glBindBuffer(GL_ARRAY_BUFFER, object->array_buffer); 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, object->element_array_buffer);
 

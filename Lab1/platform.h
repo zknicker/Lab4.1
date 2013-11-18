@@ -1,6 +1,5 @@
 //
-//  Cross-platform dependency includes.
-//    - Takes care of OpenGL.
+//  Cross-platform OpenGL dependency includes.
 //
 
 #ifndef PLATFORM_H
@@ -15,8 +14,6 @@
 #include "glm/ext.hpp"
 
 #else // Windows includes.
-#include <direct.h>
-#define getcwd _getcwd //getcwd is deprecated on Windows, but not elsewhere.
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include <glm/glm.hpp>

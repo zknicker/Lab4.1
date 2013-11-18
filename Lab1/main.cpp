@@ -11,8 +11,7 @@
  * (w) enable wireframes.
  * (v) draw trackball.
  * (p) disable shadows.
- * (left mouse button) hold and drag to rotate the camera.
- * (right mouse button) hold and drag to zoom.
+ * (left mouse button) hold and drag to rotate the scene.
  * ------------------------------------------------------------ */
 
 #include <stdio.h>
@@ -29,6 +28,7 @@
 #include "obj_utils.h"
 #include "primitives.h"
 #include "trackball.h"
+#include "Cube.h"
 
 using namespace glm;
 using namespace std;
@@ -130,12 +130,12 @@ void display(void) {
 	vec3 up = vec3(0, 1, 0);
 
     // Setup Model, View, and Projection matrices.
-	scene.projection = glm::perspective(80.0f, 4.0f / 3.0f, 0.1f, 100.0f);
+	scene.projection = glm::perspective(60.0f, 4.0f / 3.0f, 0.1f, 100.0f);
 	scene.view = glm::lookAt(position, center, up);
     scene.model = glm::mat4(1.0);
 
 	// Update the light.
-    scene.light_pos = glm::vec3(0.0, 4.0, -6.0);
+    scene.light_pos = glm::vec3(0.0, 4.0, -10.0);
 	glUniform3f(scene.phong_shader.lightMatId, 1.0, 1.0, 1.0);
 
 	// Create the transformation matrix stack.
@@ -224,94 +224,6 @@ void display(void) {
     glutSwapBuffers();
 }
 
-void getObjectClicked(int x, int y) {
-	cout << "mouse clicked";
-
-	glUseProgram(scene.picking_shader.program);
-
-	// Clear the screen in white
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    // Only the positions are needed (not the UVs and normals)
-    glEnableVertexAttribArray(0);
-	/*
-    glm::mat4 RotationMatrix = glm::toMat4(orientations[i]);
-    glm::mat4 TranslationMatrix = translate(mat4(), positions[i]);
-    glm::mat4 ModelMatrix = TranslationMatrix * RotationMatrix;
-
-    glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
-
-    // Send our transformation to the currently bound shader, 
-    // in the "MVP" uniform
-    glUniformMatrix4fv(PickingMatrixID, 1, GL_FALSE, &MVP[0][0]);
-
-    // Convert "i", the integer mesh ID, into an RGB color
-    int r = (i & 0x000000FF) >>  0;
-    int g = (i & 0x0000FF00) >>  8;
-    int b = (i & 0x00FF0000) >> 16;
-
-    // OpenGL expects colors to be in [0,1], so divide by 255.
-    glUniform4f(pickingColorID, r/255.0f, g/255.0f, b/255.0f, 1.0f);
-
-    // 1rst attribute buffer : vertices
-    glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-    glVertexAttribPointer(
-            0,                  // attribute
-            3,                  // size
-            GL_FLOAT,           // type
-            GL_FALSE,           // normalized?
-            0,                  // stride
-            (void*)0            // array buffer offset
-    );
-
-    // Index buffer
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-
-    // Draw the triangles !
-    glDrawElements(
-            GL_TRIANGLES,      // mode
-            indices.size(),    // count
-            GL_UNSIGNED_SHORT,   // type
-            (void*)0           // element array buffer offset
-    );
-
-    glDisableVertexAttribArray(0);
-
-    // Wait until all the pending drawing commands are really done.
-    // Ultra-mega-over slow ! 
-    // There are usually a long time between glDrawElements() and
-    // all the fragments completely rasterized.
-    glFlush();
-    glFinish(); 
-
-    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-    // Read the pixel at the center of the screen.
-    // You can also use glfwGetMousePos().
-    // Ultra-mega-over slow too, even for 1 pixel, 
-    // because the framebuffer is on the GPU.
-    unsigned char data[4];
-    glReadPixels(x, y, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, data);
-
-    // Convert the color back to an integer ID
-    int pickedID = 
-            data[0] + 
-            data[1] * 256 +
-            data[2] * 256*256;
-
-    if (pickedID == 0x00ffffff){ // Full white, must be the background !
-            message = "background";
-    }else{
-            std::ostringstream oss;
-            oss << "mesh " << pickedID;
-            message = oss.str();
-    }
-	glClearColor(1.0, 0.0, 0.0, 0.0);
-	glutSwapBuffers();
-	*/
-}
-
 /* Responses to mouse click events.
  * -------------------------------------------------------------------------- */
 void mouseController(int button, int state, int x, int y) {
@@ -319,7 +231,6 @@ void mouseController(int button, int state, int x, int y) {
 		if (state == GLUT_DOWN) {
 			press_x = x; press_y = y;
 			mapToTrackball(x, y, window_size, last_pos);
-			//getObjectClicked(x, y); //for later implementation of relocatable trackball
 		}
 	}
 }
@@ -398,6 +309,8 @@ int main(int argc, char **argv) {
 	cout << "Loading the custom texture: tiles.ppm (5190kb)\n";
 	readTexture(&scene, "tiles.ppm");
 
+    Cube myCube;
+    
 	// Load texture 1.
 	cout << "tiles.ppm loaded. Loading the texture to the GPU.\n";
 	glGenTextures(1, &scene.phong_shader.tex_one_id); 
