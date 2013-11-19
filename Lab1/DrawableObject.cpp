@@ -15,10 +15,28 @@
 #include "platform.h"
 #include "DrawableObject.h"
 #include "shader_utils.h"
+#include "primitives.h"
 
+DrawableObject::DrawableObject() { cout << "Instantiated drawable object.";
+    // Store vertex and index data in the GPU.
+    glGenBuffers(1, &array_buffer_id);
+    glGenBuffers(1, &element_array_buffer_id);
+}
 
-DrawableObject::DrawableObject() { cout << "Instantiated drawable object."; }
 DrawableObject::~DrawableObject() { }
+
+void DrawableObject::updateBuffers() {
+    // Store vertex and index data in the GPU.
+    glBindBuffer(GL_ARRAY_BUFFER, array_buffer_id);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vertices.size(), &vertices[0], GL_STATIC_DRAW);
+    
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_array_buffer_id);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLushort) * indices.size(), &indices[0], GL_STATIC_DRAW);
+    
+    // Reset binded buffer.
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+}
 
 void DrawableObject::setAmbient(float r, float g, float b) {
     ambient[0] = r;
@@ -44,6 +62,14 @@ void DrawableObject::setSpecularPower(float power) {
 
 void DrawableObject::setUseTexture(int use) {
     use_texture = use;
+}
+
+void DrawableObject::setTextureId(int texture) {
+    texture_id = texture;
+}
+
+void DrawableObject::setShader(int shader) {
+    this->shader = shader;
 }
 
 void DrawableObject::draw(Scene *scene, int shader) {
@@ -76,19 +102,19 @@ void DrawableObject::draw(Scene *scene, int shader) {
     textureCoordsId = glGetAttribLocation(program, "tex_coord");
     
 	// Bind buffers.
-	glBindBuffer(GL_ARRAY_BUFFER, array_buffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_array_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, array_buffer_id);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_array_buffer_id);
     
     glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
     
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)48); // Texture Coords
+    glVertexAttribPointer(verticesId, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
+    glVertexAttribPointer(normalsId, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
+    glVertexAttribPointer(textureCoordsId, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)48); // Texture Coords
     
     // Draw the cube.
-	glDrawElements(object->draw_elements_mode, object->draw_elements_count, object->draw_elements_type, (char*) NULL + 0);
+	glDrawElements(draw_elements_mode, (int) indices.size(), GL_SHORT, (char*) NULL + 0);
     
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);

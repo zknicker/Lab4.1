@@ -53,6 +53,8 @@ bool draw_wireframes = false;
 bool draw_shadows = true;
 bool draw_trackball = false;
 
+Cube *myCube;
+
 /* Initializes the desired model's (.obj) VBO and prepares it to be drawn.
  * -------------------------------------------------------------------------- */
 void initObj(string obj_path) {
@@ -185,7 +187,8 @@ void display(void) {
     // Draw objects.
 	scene.model = model_stack.top();
 	scene.model = glm::translate(scene.model, vec3(-0.75, 0.0, 0.0));
-	drawCube(&scene, false, false);
+	myCube->draw(&scene, PHONG_SHADER);
+    //drawCube(&scene, false, false);
 	scene.model = glm::translate(scene.model, vec3(-1.5, 0.0, 0.0));
 	drawSphere(&scene, false);
 	scene.model = model_stack.top();
@@ -309,7 +312,7 @@ int main(int argc, char **argv) {
 	cout << "Loading the custom texture: tiles.ppm (5190kb)\n";
 	readTexture(&scene, "tiles.ppm");
 
-    Cube myCube;
+    myCube = new Cube();
     
 	// Load texture 1.
 	cout << "tiles.ppm loaded. Loading the texture to the GPU.\n";

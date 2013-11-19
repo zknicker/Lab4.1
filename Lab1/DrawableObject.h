@@ -12,6 +12,8 @@
 #include <iostream>
 #include <vector>
 #include "platform.h"
+#include "shader_utils.h"
+#include "primitives.h"
 
 using namespace std;
 using namespace glm;
@@ -19,10 +21,12 @@ using namespace glm;
 class DrawableObject {
 protected:
     // Vertices
-    vector<vec4> vertices;
-    vector<vec4> normals;
-    vector<vec2> uvs;
-    vector<vec3> tangents;
+    vector<Vertex> vertices;
+    vector<GLushort> indices;
+    
+    // Buffers
+    GLuint array_buffer_id;
+    GLuint element_array_buffer_id;
     
     // Lighting
     float ambient[3];
@@ -31,28 +35,30 @@ protected:
     float specular_power;
 	
     // Texturing
-    int use_texture;
+    int use_texture = 0;
+    int texture_id = 0;
     
     // Transformations
     glm::mat4 model;
 	glm::mat4 trackball;
     
     // Drawing
-	GLuint array_buffer;
-	GLuint element_array_buffer;
-	GLenum draw_elements_mode;
-	GLsizei draw_elements_count;
-	GLenum draw_elements_type;
+    int shader;
+	GLenum draw_elements_mode = GL_QUADS;
     
 public:
 	DrawableObject();
     ~DrawableObject();
+    
+    void updateBuffers();
     
     void setAmbient(float r, float g, float b);
     void setDiffuse(float r, float g, float b);
     void setSpecular(float r, float g, float b);
     void setSpecularPower(float power);
     void setUseTexture(int should_use);
+    void setTextureId(int texture);
+    void setShader(int shader);
     
     float* getAmbient();
     float* getDiffuse();

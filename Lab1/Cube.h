@@ -13,7 +13,7 @@ using namespace std;
 
 class Cube : public DrawableObject {
 private:
-    
+    void init();
 public:
 	Cube();
     ~Cube();
