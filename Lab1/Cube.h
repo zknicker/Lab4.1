@@ -1,7 +1,8 @@
 //
-//  Defines a drawable cube.
+//  Cube
 //
-
+//  Extension of DrawableObject to facilitate the drawing of the cube primitive.
+//
 #ifndef CUBE_H
 #define CUBE_H
 

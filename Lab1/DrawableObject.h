@@ -7,7 +7,7 @@
 //
 
 #ifndef DRAWABLE_OJBECT_H
-#define DRAWABLE_OBJECT_H
+#define DRAWABLE_OJBECT_H
 
 #include <iostream>
 #include <vector>
@@ -35,8 +35,8 @@ protected:
     float specular_power;
 	
     // Texturing
-    int use_texture = 0;
-    int texture_id = 0;
+    int use_texture;
+    int texture;
     
     // Transformations
     glm::mat4 model;
@@ -44,7 +44,7 @@ protected:
     
     // Drawing
     int shader;
-	GLenum draw_elements_mode = GL_QUADS;
+	GLenum draw_elements_mode;
     
 public:
 	DrawableObject();
@@ -57,7 +57,7 @@ public:
     void setSpecular(float r, float g, float b);
     void setSpecularPower(float power);
     void setUseTexture(int should_use);
-    void setTextureId(int texture);
+    void setTexture(int texture);
     void setShader(int shader);
     
     float* getAmbient();

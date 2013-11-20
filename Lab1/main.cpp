@@ -29,6 +29,8 @@
 #include "primitives.h"
 #include "trackball.h"
 #include "Cube.h"
+#include "Cylinder.h"
+#include "Sphere.h"
 
 using namespace glm;
 using namespace std;
@@ -54,6 +56,8 @@ bool draw_shadows = true;
 bool draw_trackball = false;
 
 Cube *myCube;
+Cylinder *myCylinder;
+Sphere *mySphere;
 
 /* Initializes the desired model's (.obj) VBO and prepares it to be drawn.
  * -------------------------------------------------------------------------- */
@@ -188,12 +192,11 @@ void display(void) {
 	scene.model = model_stack.top();
 	scene.model = glm::translate(scene.model, vec3(-0.75, 0.0, 0.0));
 	myCube->draw(&scene, PHONG_SHADER);
-    //drawCube(&scene, false, false);
 	scene.model = glm::translate(scene.model, vec3(-1.5, 0.0, 0.0));
-	drawSphere(&scene, false);
+	mySphere->draw(&scene, PHONG_SHADER);
 	scene.model = model_stack.top();
 	scene.model = glm::translate(scene.model, vec3(0.75, 0.0, 0.0));
-	drawCylinder(&scene, false);
+	myCylinder->draw(&scene, PHONG_SHADER);
 	scene.model = glm::translate(scene.model, vec3(1.5, -0.5, 0.0));
 	drawObj(false);
 
@@ -203,21 +206,17 @@ void display(void) {
 		glStencilFunc(GL_EQUAL, 1, ~0);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
-		glEnable(GL_BLEND);
-		glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-
 		scene.model = model_stack.top();
 		scene.model = glm::translate(scene.model, vec3(-0.75, 0.0, 0.0));
-		drawCube(&scene, true, false);
+		myCube->draw(&scene, SHADOW_SHADER);
 		scene.model = glm::translate(scene.model, vec3(-1.5, 0.0, 0.0));
-		drawSphere(&scene, true);
+		mySphere->draw(&scene, SHADOW_SHADER);
 		scene.model = model_stack.top();
 		scene.model = glm::translate(scene.model, vec3(0.75, 0.0, 0.0));
-		drawCylinder(&scene, true);
+		myCylinder->draw(&scene, SHADOW_SHADER);
 		scene.model = glm::translate(scene.model, vec3(1.5, -0.5, 0.0));
 		drawObj(true);
 
-		glDisable(GL_BLEND);
 		glDisable(GL_STENCIL_TEST);
 	}
 
@@ -313,6 +312,8 @@ int main(int argc, char **argv) {
 	readTexture(&scene, "tiles.ppm");
 
     myCube = new Cube();
+	myCylinder = new Cylinder();
+	mySphere = new Sphere();
     
 	// Load texture 1.
 	cout << "tiles.ppm loaded. Loading the texture to the GPU.\n";

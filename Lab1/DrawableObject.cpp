@@ -1,9 +1,8 @@
 //
-//  DrawableObject.cpp
-//  Shadows
+//  DrawableObject
 //
-//  Created by Zach Knickerbocker on 11/18/13.
-//  Copyright (c) 2013 Zach Knickerbocker. All rights reserved.
+//  Creates and draws a drawable object to the screen. This is the base class
+//  for all objects in the scene.
 //
 
 #include <stdio.h>
@@ -21,6 +20,11 @@ DrawableObject::DrawableObject() { cout << "Instantiated drawable object.";
     // Store vertex and index data in the GPU.
     glGenBuffers(1, &array_buffer_id);
     glGenBuffers(1, &element_array_buffer_id);
+
+	// Field defaults.
+	use_texture = 0;
+	texture = 0;
+	draw_elements_mode = GL_QUADS;
 }
 
 DrawableObject::~DrawableObject() { }
@@ -64,8 +68,8 @@ void DrawableObject::setUseTexture(int use) {
     use_texture = use;
 }
 
-void DrawableObject::setTextureId(int texture) {
-    texture_id = texture;
+void DrawableObject::setTexture(int texture) {
+    this->texture = texture;
 }
 
 void DrawableObject::setShader(int shader) {
@@ -73,10 +77,11 @@ void DrawableObject::setShader(int shader) {
 }
 
 void DrawableObject::draw(Scene *scene, int shader) {
-    GLuint program, verticesId, normalsId, textureCoordsId;
-    
+	// Setup shader vars.
+    GLuint program;
 	if (shader == PHONG_SHADER) {
         program = scene->phong_shader.program;
+		glUseProgram(program);
 		glUniform3f(scene->phong_shader.ambientMatId, ambient[0], ambient[1], ambient[2]);
 		glUniform3f(scene->phong_shader.diffuseMatId, diffuse[0], diffuse[1], diffuse[2]);
 		glUniform3f(scene->phong_shader.specularMatId, specular[0], specular[1], specular[2]);
@@ -86,35 +91,37 @@ void DrawableObject::draw(Scene *scene, int shader) {
         
 	} else if (shader == SHADOW_SHADER) {
 		program = scene->shadow_shader.program;
+		glUseProgram(program);
 		updateShadowShader(scene);
         
 	} else if (shader == PICKER_SHADER) {
         program = scene->picking_shader.program;
+		glUseProgram(program);
 		updatePickingShader(scene);
 	} else {
         cout << "Fatal error: invalid shader specified while drawing object.";
         exit(1);
     }
-    
-    glUseProgram(program);
-    verticesId = glGetAttribLocation(program, "vertex_model");
-    normalsId = glGetAttribLocation(program, "normal_model");
-    textureCoordsId = glGetAttribLocation(program, "tex_coord");
-    
+        
+	GLuint vertex_model_id = glGetAttribLocation(program, "vertex_model");
+    GLuint normal_model_id = glGetAttribLocation(program, "normal_model");
+    GLuint tex_coord_id = glGetAttribLocation(program, "tex_coord");
+
 	// Bind buffers.
 	glBindBuffer(GL_ARRAY_BUFFER, array_buffer_id);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, element_array_buffer_id);
     
+	// Configure shader attribute pointers.
     glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
     
-    glVertexAttribPointer(verticesId, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
-    glVertexAttribPointer(normalsId, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
-    glVertexAttribPointer(textureCoordsId, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)48); // Texture Coords
+    glVertexAttribPointer(vertex_model_id, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
+    glVertexAttribPointer(normal_model_id, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
+    glVertexAttribPointer(tex_coord_id, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)48); // Texture Coords
     
     // Draw the cube.
-	glDrawElements(draw_elements_mode, (int) indices.size(), GL_SHORT, (char*) NULL + 0);
+	glDrawElements(draw_elements_mode, indices.size(), GL_UNSIGNED_SHORT, (char*) NULL + 0);
     
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);

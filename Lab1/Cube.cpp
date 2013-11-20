@@ -1,9 +1,7 @@
 //
-//  Cube.cpp
-//  Shadows
+//  Cube
 //
-//  Created by Zach Knickerbocker on 11/14/13.
-//  Copyright (c) 2013 Zach Knickerbocker. All rights reserved.
+//  Extension of DrawableObject to facilitate the drawing of the cube primitive.
 //
 
 #include "Cube.h"
@@ -12,12 +10,12 @@
 using namespace std;
 
 Cube::Cube() {
+	draw_elements_mode = GL_QUADS;
+
     setAmbient(0, 0, 0.2);
     setDiffuse(0, 0, 0.7);
     setSpecular(0.3, 0.3, 0.3);
     setSpecularPower(5);
-    setUseTexture(1);
-    setTextureId(0);
     setShader(PHONG_SHADER);
     
     init();
@@ -27,10 +25,11 @@ Cube::Cube() {
 Cube::~Cube() { }
 
 void Cube::init() {
+    float half_cube_size = CUBE_SIZE / 2.0;
+
     vertices.resize(8);
     indices.resize(24);
-    float half_cube_size = CUBE_SIZE / 2.0;
-    cout << "Makin' vertices.\n";
+
 	vertices[0].point[0] = -half_cube_size;		vertices[0].point[1] = -half_cube_size;		vertices[0].point[2] = -half_cube_size;		vertices[0].point[3] = 1; // Back Lower Left
 	vertices[1].point[0] = -half_cube_size;		vertices[1].point[1] = -half_cube_size;		vertices[1].point[2] = half_cube_size;		vertices[1].point[3] = 1; // Front Lower Left
 	vertices[2].point[0] = -half_cube_size;		vertices[2].point[1] = half_cube_size;		vertices[2].point[2] = -half_cube_size;		vertices[2].point[3] = 1; // Back Upper Left
