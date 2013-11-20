@@ -14,10 +14,12 @@
 #include "glm/ext.hpp"
 
 #else // Windows includes.
+#include <direct.h>
 #include <GL/glew.h>
 #include <GL/glut.h>
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
+#define getcwd _getcwd
 #endif
 
 // Sorry, no Linux includes. But, if you define them in
