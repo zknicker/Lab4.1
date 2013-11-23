@@ -30,7 +30,9 @@ void main(){
 	eyedir_eye = vec3(0,0,0) - vertex_eye;
     
 	// Eye space vector from vertex to light.
-	vec3 light_eye = (view * vec4(light_world, 1)).xyz;
+    vec4 vertex_world = model * vec4(vertex_model, 1.0);
+    vec3 point_light_world = light_world - vertex_world.xyz;
+	vec3 light_eye = (view * vec4(point_light_world, 1)).xyz;
 	lightdir_eye = light_eye + eyedir_eye;
 	
 	// Eye space normal vector of the vertex.

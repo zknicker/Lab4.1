@@ -13,8 +13,11 @@ uniform vec3 ambient_mat;
 uniform vec3 diffuse_mat;
 uniform vec3 specular_mat;
 uniform float specular_power;
-uniform sampler2D tex_one_sampler;
 uniform int use_texture;
+
+uniform sampler2D tex_sampler;
+uniform samplerCube cube_map_sampler;
+
 
 void main(){
     
@@ -33,7 +36,7 @@ void main(){
     vec3 specular = specular_mat * light_mat * pow(specular_angle, specular_power);
     
 	if (use_texture == 1) {
-        vec4 tex_color = texture2D(tex_one_sampler, frag_tex_coord);
+        vec4 tex_color = texture2D(tex_sampler, frag_tex_coord);
         gl_FragColor = vec4(ambient + (diffuse + tex_color.xyz) + specular, 1.0);
     } else {
         gl_FragColor = vec4(ambient + diffuse + specular, 1.0);

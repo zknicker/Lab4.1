@@ -121,6 +121,61 @@ void drawObj(bool shadow) {
 	glEnableVertexAttribArray(2);
 }
 
+/* Draws a six sided cube representing the environment.
+ * -------------------------------------------------------------------------- */
+void drawEnvironment(stack<mat4> *model_stack) {
+	double room_size = 30.0;
+	double wall_width = 0.05;
+	
+	model_stack->push(scene.model);
+
+	glEnable(GL_POLYGON_OFFSET_FILL); // fight the z (z-fighting fix)!
+	glPolygonOffset(1,1);
+    
+	glEnable(GL_STENCIL_TEST);
+	glStencilFunc(GL_ALWAYS, 1, ~0);
+	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
+	// Draw negative Y wall.
+	scene.model = glm::scale(scene.model, vec3(room_size, wall_width, room_size));
+	scene.model = glm::translate(scene.model, vec3(0.0, -0.5, 0.0));
+	drawCube(&scene, false, true);
+
+	glDisable(GL_POLYGON_OFFSET_FILL);
+	glDisable(GL_STENCIL_TEST);
+
+	// Draw positive y wall.
+	scene.model = glm::translate(scene.model, vec3(0.0, 0.5, 0.0));
+	scene.model = glm::translate(scene.model, vec3(0.0, room_size * (1.0 / wall_width), 0.0));
+	drawCube(&scene, false, true);
+
+	// Draw positive X wall.
+	scene.model = model_stack->top();
+	scene.model = glm::rotate(scene.model, -90.0f, vec3(0.0, 0.0, 1.0));
+	scene.model = glm::translate(scene.model, vec3(0.0, room_size / 2.0, 0.0));
+	scene.model = glm::scale(scene.model, vec3(room_size, wall_width, room_size));
+	scene.model = glm::translate(scene.model, vec3(-0.5, 0.5, 0.0));
+	drawCube(&scene, false, true);
+
+	// Draw negative X wall.
+	scene.model = glm::translate(scene.model, vec3(0.0, -room_size * (1.0 / wall_width), 0.0));
+	drawCube(&scene, false, true);
+
+	// Draw positive Z wall.
+	scene.model = model_stack->top();
+	scene.model = glm::rotate(scene.model, -90.0f, vec3(1.0, 0.0, 0.0));
+	scene.model = glm::translate(scene.model, vec3(0.0, room_size / 2.0, room_size / 2.0));
+	scene.model = glm::scale(scene.model, vec3(room_size, wall_width, room_size));
+	scene.model = glm::translate(scene.model, vec3(0.0, 0.5, 0.0));
+	drawCube(&scene, false, true);
+
+	// Draw negative Z wall.
+	scene.model = glm::translate(scene.model, vec3(0.0, -room_size * (1.0 / wall_width), 0.0));
+	drawCube(&scene, false, true);
+
+	model_stack->pop();
+}
+
 /* Main animation function. Draws the screen.
  * -------------------------------------------------------------------------- */
 void display(void) {
@@ -131,7 +186,7 @@ void display(void) {
 	glUseProgram(scene.phong_shader.program);
 
 	// Camera vars.
-	vec3 position = vec3(0, 2.0, -4.0);
+	vec3 position = vec3(0, 2.0, -10.0);
 	vec3 center = vec3(0, 0, 0);
 	vec3 up = vec3(0, 1, 0);
 
@@ -141,7 +196,7 @@ void display(void) {
     scene.model = glm::mat4(1.0);
 
 	// Update the light.
-    scene.light_pos = glm::vec3(0.0, 4.0, -10.0);
+    scene.light_pos = glm::vec3(0.0, 2.0, -4.0);
 	glUniform3f(scene.phong_shader.lightMatId, 1.0, 1.0, 1.0);
 
 	// Create the transformation matrix stack.
@@ -164,25 +219,13 @@ void display(void) {
 		scene.model = model_stack.top();
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
-
-	glEnable(GL_POLYGON_OFFSET_FILL); // fight the z (z-fighting fix)!
-	glPolygonOffset(1,1);
     
-	glEnable(GL_STENCIL_TEST);
-	glStencilFunc(GL_ALWAYS, 1, ~0);
-	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
-    
-	// Draw ground.
-	scene.model = glm::scale(scene.model, vec3(10.0, 0.1, 10.0));
-	scene.model = glm::translate(scene.model, vec3(0.0, -0.5f, 0.0));
-	drawCube(&scene, false, true);
+	// Draw environment.
+	drawEnvironment(&model_stack);
 	scene.model = model_stack.top();
-	
-	glDisable(GL_POLYGON_OFFSET_FILL);
-	glDisable(GL_STENCIL_TEST);
     
-	// Global transform all objects upward.
-	scene.model = glm::translate(scene.model, vec3(0.0, 0.8, 0.0));
+	// Global transform all objects.
+	scene.model = glm::translate(scene.model, vec3(0.0, 0.5, 0.0));
 	model_stack.push(scene.model);
 
 	// Draw wireframes?
@@ -190,15 +233,7 @@ void display(void) {
 
     // Draw objects.
 	scene.model = model_stack.top();
-	scene.model = glm::translate(scene.model, vec3(-0.75, 0.0, 0.0));
-	myCube->draw(&scene, PHONG_SHADER);
-	scene.model = glm::translate(scene.model, vec3(-1.5, 0.0, 0.0));
 	mySphere->draw(&scene, PHONG_SHADER);
-	scene.model = model_stack.top();
-	scene.model = glm::translate(scene.model, vec3(0.75, 0.0, 0.0));
-	myCylinder->draw(&scene, PHONG_SHADER);
-	scene.model = glm::translate(scene.model, vec3(1.5, -0.5, 0.0));
-	drawObj(false);
 
 	// Draw shadows.
 	if (draw_shadows) {
@@ -207,15 +242,7 @@ void display(void) {
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
 		scene.model = model_stack.top();
-		scene.model = glm::translate(scene.model, vec3(-0.75, 0.0, 0.0));
-		myCube->draw(&scene, SHADOW_SHADER);
-		scene.model = glm::translate(scene.model, vec3(-1.5, 0.0, 0.0));
 		mySphere->draw(&scene, SHADOW_SHADER);
-		scene.model = model_stack.top();
-		scene.model = glm::translate(scene.model, vec3(0.75, 0.0, 0.0));
-		myCylinder->draw(&scene, SHADOW_SHADER);
-		scene.model = glm::translate(scene.model, vec3(1.5, -0.5, 0.0));
-		drawObj(true);
 
 		glDisable(GL_STENCIL_TEST);
 	}
@@ -264,6 +291,46 @@ void keyboardController(unsigned char key, int x, int y)
 	}
 }
 
+void loadCubeMap() {
+	glEnable(GL_TEXTURE_CUBE_MAP); 
+	glGenTextures(1, &scene.phong_shader.cubemap_texture); 
+	glBindTexture(GL_TEXTURE_CUBE_MAP, scene.phong_shader.cubemap_texture); 
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_REPEAT); 
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
+	glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); 
+	glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE, GL_REPLACE);
+
+	Texture cubemap_textures[6];
+	cubemap_textures[0] = Texture();
+	readTexture(&cubemap_textures[0], "snow_posx.jpg");
+	cubemap_textures[1] = Texture();
+	readTexture(&cubemap_textures[1], "snow_negx.jpg");
+	cubemap_textures[2] = Texture();
+	readTexture(&cubemap_textures[2], "snow_posy.jpg");
+	cubemap_textures[3] = Texture();
+	readTexture(&cubemap_textures[3], "snow_negy.jpg");
+	cubemap_textures[4] = Texture();
+	readTexture(&cubemap_textures[4], "snow_posz.jpg");
+	cubemap_textures[5] = Texture();
+	readTexture(&cubemap_textures[5], "snow_negz.jpg");
+
+	/*
+	for (int i = 0; i < 6; i++) {
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA, cubemap_textures[i].width, cubemap_textures[i].width, 0, GL_RGBA, GL_UNSIGNED_BYTE, &cubemap_textures[i].image);
+	}
+	*/
+
+	scene.phong_shader.cubemap_sampler = glGetUniformLocation(scene.phong_shader.program, "cube_map_sampler"); 
+	glUniform1i(scene.phong_shader.cubemap_sampler, scene.phong_shader.cubemap_texture);
+}
+
+void loadCubeMapTextures() {
+
+}
+
 int main(int argc, char **argv) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_ALPHA | GLUT_STENCIL);
@@ -309,7 +376,7 @@ int main(int argc, char **argv) {
 
 	// Setup texture 1.
 	cout << "Loading the custom texture: tiles.ppm (5190kb)\n";
-	readTexture(&scene, "tiles.ppm");
+	readTexture(&scene.tex_one, "tiles.ppm");
 
     myCube = new Cube();
 	myCylinder = new Cylinder();
@@ -317,14 +384,19 @@ int main(int argc, char **argv) {
     
 	// Load texture 1.
 	cout << "tiles.ppm loaded. Loading the texture to the GPU.\n";
-	glGenTextures(1, &scene.phong_shader.tex_one_id); 
-	glBindTexture(GL_TEXTURE_2D, scene.phong_shader.tex_one_id);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, scene.tex_one_image_width, scene.tex_one_image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, &scene.tex_one_image_v[0]);
+	glGenTextures(1, &scene.tex_one.id); 
+	glBindTexture(GL_TEXTURE_2D, scene.tex_one.id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, scene.tex_one.width, scene.tex_one.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, &scene.tex_one.image[0]);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glUniform1i(scene.phong_shader.tex_one_sampler, 0);
+	glUniform1i(scene.phong_shader.tex_sampler, scene.tex_one.id);
+
+	// Load CubeMap textures.
+	cout << "Loading the 6 cubemap textures.\n";
+	loadCubeMap();
+	loadCubeMapTextures();
 
 	cout << "\n----------------------------------------\n";
 	cout << "(q) to quit.\n(w) to toggle wireframes.\n";

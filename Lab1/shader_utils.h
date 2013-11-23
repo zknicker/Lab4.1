@@ -25,9 +25,11 @@ typedef struct {
 	GLuint specularPowerId;
 	GLuint lightMatId;
 	
+	GLuint cubemap_sampler;
+	GLuint cubemap_texture;
+
 	GLuint use_texture_id;
-	GLuint tex_one_id;
-	GLuint tex_one_sampler;
+	GLuint tex_sampler;
 } PhongShader;
 
 typedef struct {
@@ -79,6 +81,13 @@ typedef struct {
 } Object;
 
 typedef struct {
+	GLuint id;
+	GLuint height;
+	GLuint width;
+	std::vector<Texel> image;
+} Texture;
+
+typedef struct {
 	PhongShader phong_shader;
 	ShadowShader shadow_shader;
 	PickingShader picking_shader;
@@ -92,9 +101,13 @@ typedef struct {
 	glm::vec3 light_pos;
 	
 	// Textures
-	GLuint tex_one_image_height;
-	GLuint tex_one_image_width;
-	std::vector<Texel> tex_one_image_v;
+	Texture tex_one;
+	Texture cubemap_positive_x;
+	Texture cubemap_negative_x;
+	Texture cubemap_positive_y;
+	Texture cubemap_negative_y;
+	Texture cubemap_position_z;
+	Texture cubemap_negative_z;
 
 	// Mapping of object model transformations to id (i.e. index in vector).
 	// The object's index maps to a color such that it can be "picked" by the
@@ -143,6 +156,6 @@ void updatePickingShader(Scene *scene);
 
 /* Reads a texture into the scene struct.
  * -------------------------------------------------------------------------- */
-void readTexture(Scene *scene, char *texture_name);
+void readTexture(Texture *texture, char *texture_name);
 
 #endif

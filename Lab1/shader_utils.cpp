@@ -161,7 +161,7 @@ void setupPhongShader(PhongShader* phong_shader) {
 	phong_shader->specularMatId = glGetUniformLocation(phong_shader->program, "specular_mat");
 	phong_shader->specularPowerId = glGetUniformLocation(phong_shader->program, "specular_power");
 	phong_shader->use_texture_id = glGetUniformLocation(phong_shader->program, "use_texture");
-	phong_shader->tex_one_sampler = glGetUniformLocation(phong_shader->program, "tex_one_sampler");
+	phong_shader->tex_sampler = glGetUniformLocation(phong_shader->program, "tex_sampler");
     
     // Default is 0, AKA no texture.
     glUniform1i(phong_shader->use_texture_id, 0);
@@ -229,25 +229,25 @@ void updatePickingShader(Scene *scene) {
 
 /* Reads a texture into the scene struct.
  * -------------------------------------------------------------------------- */
-void readTexture(Scene *scene, char* texture_name) {
+void readTexture(Texture *texture, char* texture_name) {
 	FILE* in = fopen(texture_name, "r"); 
 
 	int height, width, ccv; 
 	char header[100]; 
 	fscanf(in, "%s %d %d %d", header, &width, &height, &ccv); 
-	scene->tex_one_image_height = height;
-	scene->tex_one_image_width = width;
-	scene->tex_one_image_v.resize(height * width);
+	texture->height = height;
+	texture->width = width;
+	texture->image.resize(height * width);
 
 	int r, g, b; 
 	for (int i=height-1; i>=0; i--) {
 		for (int j=0; j<width; j++)	{
 			fscanf(in, "%d %d %d", &r, &g, &b);
 			int index = i * width + j;
-			scene->tex_one_image_v[index].r = (GLubyte)r; 
-			scene->tex_one_image_v[index].g = (GLubyte)g; 
-			scene->tex_one_image_v[index].b = (GLubyte)b; 
-			scene->tex_one_image_v[index].a = 255; 
+			texture->image[index].r = (GLubyte)r; 
+			texture->image[index].g = (GLubyte)g; 
+			texture->image[index].b = (GLubyte)b; 
+			texture->image[index].a = 255; 
 		}
 	}
 
