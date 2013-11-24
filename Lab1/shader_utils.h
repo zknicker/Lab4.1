@@ -14,6 +14,7 @@ typedef struct {
 
 	// Shader vars.
 	GLuint lightId;
+	GLuint cameraPosId;
 	GLuint modelId;
 	GLuint viewId;
 	GLuint projectionId;
@@ -27,8 +28,11 @@ typedef struct {
 	
 	GLuint cubemap_sampler;
 	GLuint cubemap_texture;
+	GLuint cubemap_textures[6];
 
 	GLuint use_texture_id;
+	GLuint light_texture_id;
+	GLuint reflect_cubemap_id;
 	GLuint tex_sampler;
 } PhongShader;
 
@@ -96,6 +100,9 @@ typedef struct {
 	glm::mat4 projection;
 	glm::mat4 view;
 	glm::mat4 model;
+
+	// Camera
+	glm::vec3 camera_pos;
 
 	// Lighting
 	glm::vec3 light_pos;

@@ -65,6 +65,10 @@ void Sphere::init() {
 			vertices[vert].point[3] = 1;
 			vertices[vert].color[3] = 1;
 			vertices[vert].normal[3] = 0;
+
+			// Texturing
+			vertices[vert].texcoord[0] = (float) cur_slice / (float) slices;
+			vertices[vert].texcoord[1] = (float) cur_stack / (float) stacks;
 		}
 	}
 

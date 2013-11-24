@@ -59,14 +59,14 @@ void Cube::init() {
 	vertices[6].color[0] = 0;	vertices[6].color[1] = 1;	vertices[6].color[2] = 0;	vertices[6].color[3] = 1;
 	vertices[7].color[0] = 0;	vertices[7].color[1] = 0;	vertices[7].color[2] = 1;	vertices[7].color[3] = 1;
     
-	vertices[0].texcoord[0] = 1;	vertices[0].texcoord[1] = 1;
-	vertices[1].texcoord[0] = 1;	vertices[1].texcoord[1] = 0;
-	vertices[2].texcoord[0] = 1;	vertices[2].texcoord[1] = 1;
-	vertices[3].texcoord[0] = 1;	vertices[3].texcoord[1] = 0;
-	vertices[4].texcoord[0] = 0;	vertices[4].texcoord[1] = 1;
-	vertices[5].texcoord[0] = 0;	vertices[5].texcoord[1] = 0;
-	vertices[6].texcoord[0] = 0;	vertices[6].texcoord[1] = 1;
-	vertices[7].texcoord[0] = 0;	vertices[7].texcoord[1] = 0;
+	vertices[0].texcoord[0] = 0;	vertices[0].texcoord[1] = 1;
+	vertices[1].texcoord[0] = 0;	vertices[1].texcoord[1] = 0;
+	vertices[2].texcoord[0] = 1;	vertices[2].texcoord[1] = 0;
+	vertices[3].texcoord[0] = 1;	vertices[3].texcoord[1] = 1;
+	vertices[4].texcoord[0] = 1;	vertices[4].texcoord[1] = 1;
+	vertices[5].texcoord[0] = 1;	vertices[5].texcoord[1] = 0;
+	vertices[6].texcoord[0] = 0;	vertices[6].texcoord[1] = 0;
+	vertices[7].texcoord[0] = 0;	vertices[7].texcoord[1] = 1;
     
 	indices[0] = 2;     indices[1] = 3;     indices[2] = 7;     indices[3] = 6; // Top Face
 	indices[4] = 0;     indices[5] = 1;     indices[6] = 5;     indices[7] = 4; // Bottom Face

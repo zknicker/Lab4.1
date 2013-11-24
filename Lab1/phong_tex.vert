@@ -13,13 +13,18 @@ varying vec3 normal_eye;
 varying vec3 eyedir_eye;
 varying vec3 lightdir_eye;
 varying vec2 frag_tex_coord;
+varying vec3 reflection;
 
 uniform mat4 view;
 uniform mat4 model;
 uniform mat4 projection;
 uniform mat3 normal;
 uniform vec3 light_world;
+uniform vec3 camera_world;
 uniform int use_texture;
+
+uniform sampler2D tex_sampler;
+uniform samplerCube cube_map_sampler;
 
 void main(){
 	// Vertex position in clip space.
@@ -43,4 +48,7 @@ void main(){
     if (use_texture == 1) {
         frag_tex_coord = tex_coord;
     }
+    
+    vec4 position_eye = view * model * vec4(vertex_model, 1);
+    reflection = reflect(position_eye.xyz - camera_world, normal_eye);
 }

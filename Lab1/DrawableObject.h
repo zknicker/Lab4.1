@@ -36,6 +36,8 @@ protected:
 	
     // Texturing
     int use_texture;
+	int light_texture;
+    int reflect_cubemap;
     int texture;
     
     // Transformations
@@ -58,6 +60,8 @@ public:
     void setSpecularPower(float power);
     void setUseTexture(int should_use);
     void setTexture(int texture);
+    void setLightTexture(int light_texture);
+    void setReflectCubemap(int reflect_cubemap);
     void setShader(int shader);
     
     float* getAmbient();

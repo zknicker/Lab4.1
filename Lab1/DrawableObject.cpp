@@ -16,7 +16,7 @@
 #include "shader_utils.h"
 #include "primitives.h"
 
-DrawableObject::DrawableObject() { cout << "Instantiated drawable object.";
+DrawableObject::DrawableObject() {
     // Store vertex and index data in the GPU.
     glGenBuffers(1, &array_buffer_id);
     glGenBuffers(1, &element_array_buffer_id);
@@ -72,6 +72,14 @@ void DrawableObject::setTexture(int texture) {
     this->texture = texture;
 }
 
+void DrawableObject::setReflectCubemap(int reflect_cubemap) {
+    this->reflect_cubemap = reflect_cubemap;
+}
+
+void DrawableObject::setLightTexture(int light_texture) {
+    this->light_texture = light_texture;
+}
+
 void DrawableObject::setShader(int shader) {
     this->shader = shader;
 }
@@ -87,6 +95,8 @@ void DrawableObject::draw(Scene *scene, int shader) {
 		glUniform3f(scene->phong_shader.specularMatId, specular[0], specular[1], specular[2]);
 		glUniform1f(scene->phong_shader.specularPowerId, specular_power);
 		glUniform1i(scene->phong_shader.use_texture_id, use_texture);
+		glUniform1i(scene->phong_shader.reflect_cubemap_id, reflect_cubemap);
+		glUniform1i(scene->phong_shader.light_texture_id, light_texture);
 		updatePhongShader(scene);
         
 	} else if (shader == SHADOW_SHADER) {

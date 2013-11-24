@@ -155,16 +155,21 @@ void setupPhongShader(PhongShader* phong_shader) {
     phong_shader->projectionId = glGetUniformLocation(phong_shader->program, "projection");
     phong_shader->normalId = glGetUniformLocation(phong_shader->program, "normal");
     phong_shader->lightId = glGetUniformLocation(phong_shader->program, "light_world");
+    phong_shader->cameraPosId = glGetUniformLocation(phong_shader->program, "camera_world");
 	phong_shader->lightMatId = glGetUniformLocation(phong_shader->program, "light_mat");
 	phong_shader->ambientMatId = glGetUniformLocation(phong_shader->program, "ambient_mat");
 	phong_shader->diffuseMatId = glGetUniformLocation(phong_shader->program, "diffuse_mat");
 	phong_shader->specularMatId = glGetUniformLocation(phong_shader->program, "specular_mat");
 	phong_shader->specularPowerId = glGetUniformLocation(phong_shader->program, "specular_power");
 	phong_shader->use_texture_id = glGetUniformLocation(phong_shader->program, "use_texture");
+	phong_shader->light_texture_id = glGetUniformLocation(phong_shader->program, "light_texture");
+	phong_shader->reflect_cubemap_id = glGetUniformLocation(phong_shader->program, "reflect_cubemap");
 	phong_shader->tex_sampler = glGetUniformLocation(phong_shader->program, "tex_sampler");
     
-    // Default is 0, AKA no texture.
+    // Default shader vars.
     glUniform1i(phong_shader->use_texture_id, 0);
+    glUniform1i(phong_shader->light_texture_id, 1);
+    glUniform1i(phong_shader->reflect_cubemap_id, 0);
 }
 
 /* Quick and easy method to initialize a shadow shader. Takes care of 
@@ -201,6 +206,7 @@ void updatePhongShader(Scene *scene) {
     glUniformMatrix4fv(scene->phong_shader.viewId, 1, GL_FALSE, &scene->view[0][0]);
     glUniformMatrix4fv(scene->phong_shader.projectionId, 1, GL_FALSE, &scene->projection[0][0]);
 	glUniformMatrix3fv(scene->phong_shader.normalId, 1, GL_FALSE, &normal_matrix[0][0]);
+	glUniform3f(scene->phong_shader.cameraPosId, scene->camera_pos.x, scene->camera_pos.y, scene->camera_pos.z);
 	glUniform3f(scene->phong_shader.lightId, scene->light_pos.x, scene->light_pos.y, scene->light_pos.z);
 }
 
