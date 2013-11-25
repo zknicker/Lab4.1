@@ -165,7 +165,6 @@ void drawEnvironment(stack<mat4> *model_stack) {
 	// Draw negative X wall.
 	scene.model = glm::translate(scene.model, vec3(0.0, room_size * (1.0 / wall_width), 0.0));
 	scene.model = glm::rotate(scene.model, 180.0f, vec3(0.0, 0.0, 1.0));
-	//scene.model = glm::rotate(scene.model, 180.0f, vec3(0.0, 1.0, 0.0));
 	glBindTexture(GL_TEXTURE_2D, scene.phong_shader.cubemap_textures[1]);
 	myCube->draw(&scene, PHONG_SHADER);
 	
@@ -173,7 +172,6 @@ void drawEnvironment(stack<mat4> *model_stack) {
 	scene.model = model_stack->top();
 	scene.model = glm::rotate(scene.model, -90.0f, vec3(1.0, 0.0, 0.0));
 	scene.model = glm::translate(scene.model, vec3(0.0, -room_size / 2.0, 0.0));
-	//scene.model = glm::rotate(scene.model, 180.0f, vec3(0.0, 0.0, 1.0));
 	scene.model = glm::scale(scene.model, vec3(room_size, wall_width, room_size));
 	glBindTexture(GL_TEXTURE_2D, scene.phong_shader.cubemap_textures[4]);
 	myCube->draw(&scene, PHONG_SHADER);
@@ -246,10 +244,11 @@ void display(void) {
 
     // Draw objects.
 	scene.model = model_stack.top();
-	glActiveTexture(GL_TEXTURE0 + 2);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, scene.phong_shader.cubemap_texture);
-	myCylinder->draw(&scene, PHONG_SHADER);
-
+	//glActiveTexture(GL_TEXTURE0 + 2);
+	//glBindTexture(GL_TEXTURE_CUBE_MAP, scene.phong_shader.cubemap_texture);
+	glActiveTexture(GL_TEXTURE0 + 0);
+	glBindTexture(GL_TEXTURE_2D, scene.bumpmap_gradients_texture.id);
+	mySphere->draw(&scene, PHONG_SHADER);
 	// Draw shadows.
 	if (draw_shadows) {
 		glEnable(GL_STENCIL_TEST);
@@ -257,7 +256,7 @@ void display(void) {
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 
 		scene.model = model_stack.top();
-		myCylinder->draw(&scene, SHADOW_SHADER);
+		mySphere->draw(&scene, SHADOW_SHADER);
 
 		glDisable(GL_STENCIL_TEST);
 	}
@@ -435,24 +434,26 @@ int main(int argc, char **argv) {
 	cout << "Initializing picking shader... ";
 	setupPickingShader(&scene.picking_shader);
 
-	// Setup texture 1.
-	//cout << "Loading the custom texture: tiles.ppm (5190kb)\n";
-	//readTexture(&scene.tex_one, "tiles.ppm");
+	// Setup bumpmap textures.
+	cout << "Reading bumpmap texture.\n";
+	readTexture(&scene.bumpmap_texture, "earth.ppm");
+	cout << "Loading bumpmap texture.\n";
+	loadTexture(&scene.bumpmap_texture);
+	cout << "Calculating gradient texture for bumpmap.\n";
+	calculateGradientsTexture(&scene.bumpmap_texture, &scene.bumpmap_gradients_texture);
+	cout << "Loading gradient texture.\n";
+	loadTexture(&scene.bumpmap_gradients_texture);
 
     myCube = new Cube();
 	myCube->setUseTexture(1);
 	myCylinder = new Cylinder();
-	myCylinder->setAmbient(0, 0, 0);
-	myCylinder->setDiffuse(230.0f / 255, 160.0f / 255, 255);
 	myCylinder->setUseTexture(1);
 	myCylinder->setLightTexture(1);
 	myCylinder->setReflectCubemap(1);
 	mySphere = new Sphere();
-	mySphere->setAmbient(0, 0, 0);
-	mySphere->setDiffuse(230.0f / 255, 160.0f / 255, 255);
 	mySphere->setUseTexture(1);
 	mySphere->setLightTexture(1);
-	mySphere->setReflectCubemap(1);
+	mySphere->setReflectCubemap(0);
 
 	// Setup texture sampler.
 	glUseProgram(scene.phong_shader.program);

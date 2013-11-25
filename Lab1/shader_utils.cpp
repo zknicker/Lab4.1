@@ -246,8 +246,8 @@ void readTexture(Texture *texture, char* texture_name) {
 	texture->image.resize(height * width);
 
 	int r, g, b; 
-	for (int i=height-1; i>=0; i--) {
-		for (int j=0; j<width; j++)	{
+	for (int i = height - 1; i >= 0; i--) {
+		for (int j = 0; j < width; j++)	{
 			fscanf(in, "%d %d %d", &r, &g, &b);
 			int index = i * width + j;
 			texture->image[index].r = (GLubyte)r; 
@@ -258,4 +258,38 @@ void readTexture(Texture *texture, char* texture_name) {
 	}
 
 	fclose(in); 
+}
+
+void calculateGradientsTexture(Texture *texture, Texture *gradient) {
+	gradient->height = texture->height;
+	gradient->width = texture->width;
+	gradient->image.resize(gradient->height * gradient->width);
+
+	for (int i = 0; i < texture->height; i++) {
+		for (int j = 0; j < texture->width; j++) {
+			int index = i * texture->width + j;
+			int index_vertical_next = ((i + 1) % texture->height) * texture->width + j;
+			int index_vertical_prev = ((i - 1) % texture->height) * texture->width + j;
+			int index_horizontal_next = i * texture->width + ((j + 1) % texture->width);
+			int index_horizontal_prev = i * texture->width + ((j - 1) % texture->width);
+
+			gradient->image[index].r = (unsigned char)((texture->image[index_vertical_next].r - texture->image[index_vertical_prev].r) / 2.0 + (texture->height / 2.0)); 
+			gradient->image[index].g = (unsigned char)((texture->image[index_horizontal_next].r - texture->image[index_horizontal_prev].r) / 2.0 + (texture->width / 2.0)); 
+			gradient->image[index].b = 20;  
+			gradient->image[index].a = 255; 
+		}
+	}
+}
+
+void loadTexture(Texture *texture) {
+	glEnable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0 + 0);
+
+	glGenTextures(1, &texture->id);
+	glBindTexture(GL_TEXTURE_2D, texture->id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->width, texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, &texture->image[0]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }

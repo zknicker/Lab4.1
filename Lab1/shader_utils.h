@@ -108,7 +108,8 @@ typedef struct {
 	glm::vec3 light_pos;
 	
 	// Textures
-	Texture tex_one;
+	Texture bumpmap_texture;
+	Texture bumpmap_gradients_texture;
 	Texture cubemap_positive_x;
 	Texture cubemap_negative_x;
 	Texture cubemap_positive_y;
@@ -164,5 +165,13 @@ void updatePickingShader(Scene *scene);
 /* Reads a texture into the scene struct.
  * -------------------------------------------------------------------------- */
 void readTexture(Texture *texture, char *texture_name);
+
+/* Creates a gradient texture (2nd parameter) for a given input texture.
+ * -------------------------------------------------------------------------- */
+void calculateGradientsTexture(Texture *texture, Texture *gradient);
+
+/* Loads a texture.
+ * -------------------------------------------------------------------------- */
+void loadTexture(Texture *texture);
 
 #endif
