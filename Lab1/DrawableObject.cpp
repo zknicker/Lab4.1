@@ -86,7 +86,8 @@ void DrawableObject::setShader(int shader) {
 
 void DrawableObject::draw(Scene *scene, int shader) {
 	// Setup shader vars.
-    GLuint program;
+    GLuint program, vertex_model_id, normal_model_id, tex_coord_id, tangent_id;
+
 	if (shader == PHONG_SHADER) {
         program = scene->phong_shader.program;
 		glUseProgram(program);
@@ -108,14 +109,22 @@ void DrawableObject::draw(Scene *scene, int shader) {
         program = scene->picking_shader.program;
 		glUseProgram(program);
 		updatePickingShader(scene);
+	} else if (shader == BUMPMAP_SHADER) {
+		program = scene->bumpmap_shader.program;
+		glUseProgram(program);
+		glUniform3f(scene->bumpmap_shader.ambientMatId, ambient[0], ambient[1], ambient[2]);
+		glUniform3f(scene->bumpmap_shader.diffuseMatId, diffuse[0], diffuse[1], diffuse[2]);
+		glUniform3f(scene->bumpmap_shader.specularMatId, specular[0], specular[1], specular[2]);
+		glUniform1f(scene->bumpmap_shader.specularPowerId, specular_power);
+		updateBumpMapShader(scene);
 	} else {
         cout << "Fatal error: invalid shader specified while drawing object.";
         exit(1);
     }
         
-	GLuint vertex_model_id = glGetAttribLocation(program, "vertex_model");
-    GLuint normal_model_id = glGetAttribLocation(program, "normal_model");
-    GLuint tex_coord_id = glGetAttribLocation(program, "tex_coord");
+	vertex_model_id = glGetAttribLocation(program, "vertex_model");
+    normal_model_id = glGetAttribLocation(program, "normal_model");
+    tex_coord_id = glGetAttribLocation(program, "tex_coord");
 
 	// Bind buffers.
 	glBindBuffer(GL_ARRAY_BUFFER, array_buffer_id);
@@ -125,17 +134,24 @@ void DrawableObject::draw(Scene *scene, int shader) {
     glEnableVertexAttribArray(0);
 	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
+	glEnableVertexAttribArray(3);
     
     glVertexAttribPointer(vertex_model_id, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
     glVertexAttribPointer(normal_model_id, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
     glVertexAttribPointer(tex_coord_id, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)48); // Texture Coords
-    
+
+	if (shader == BUMPMAP_SHADER) {
+		tangent_id = glGetAttribLocation(program, "tangent");
+		glVertexAttribPointer(tangent_id, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)64); // Tangent
+	}
+
     // Draw the cube.
 	glDrawElements(draw_elements_mode, indices.size(), GL_UNSIGNED_SHORT, (char*) NULL + 0);
     
     glDisableVertexAttribArray(0);
     glDisableVertexAttribArray(1);
     glDisableVertexAttribArray(2);
+	glDisableVertexAttribArray(3);
     
 	// Unbind buffers.
 	glBindBuffer(GL_ARRAY_BUFFER, 0);

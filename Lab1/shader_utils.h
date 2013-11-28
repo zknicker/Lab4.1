@@ -8,6 +8,7 @@
 #define PHONG_SHADER 0
 #define SHADOW_SHADER 1
 #define PICKER_SHADER 2
+#define BUMPMAP_SHADER 3
 
 typedef struct {
 	GLuint program;
@@ -35,6 +36,27 @@ typedef struct {
 	GLuint reflect_cubemap_id;
 	GLuint tex_sampler;
 } PhongShader;
+
+typedef struct {
+	GLuint program;
+
+	// Shader vars.
+	GLuint lightId;
+	GLuint cameraPosId;
+	GLuint modelId;
+	GLuint viewId;
+	GLuint projectionId;
+	GLuint normalId;
+
+	GLuint ambientMatId;
+	GLuint diffuseMatId;
+	GLuint specularMatId;
+	GLuint specularPowerId;
+	GLuint lightMatId;
+
+	GLuint tex_sampler;
+	GLuint tex_normals_sampler;
+} BumpMapShader;
 
 typedef struct {
 	GLuint program;
@@ -94,6 +116,7 @@ typedef struct {
 typedef struct {
 	PhongShader phong_shader;
 	ShadowShader shadow_shader;
+	BumpMapShader bumpmap_shader;
 	PickingShader picking_shader;
 
 	// Graphics pipeline matrices.
@@ -145,6 +168,11 @@ void setupPhongShader(PhongShader* phong_shader);
  * -------------------------------------------------------------------------- */
 void setupShadowShader(ShadowShader* shadow_shader);
 
+/* Quick and easy method to initialize a bump mapping shader. Takes care of 
+ * binding the program and getting uniform locations.
+ * -------------------------------------------------------------------------- */
+void setupBumpMapShader(BumpMapShader* bumpmap_shader);
+
 /* Quick and easy method to initialize a picking shader. Takes care of 
  * binding the program and getting uniform locations.
  * -------------------------------------------------------------------------- */
@@ -158,6 +186,10 @@ void updatePhongShader(Scene *scene);
  * -------------------------------------------------------------------------- */
 void updateShadowShader(Scene *scene);
 
+/* Updates simple uniforms in the bump mapping shader.
+ * -------------------------------------------------------------------------- */
+void updateBumpMapShader(Scene *scene);
+
 /* Updates simple uniforms in the picking shader.
  * -------------------------------------------------------------------------- */
 void updatePickingShader(Scene *scene);
@@ -168,7 +200,7 @@ void readTexture(Texture *texture, char *texture_name);
 
 /* Creates a gradient texture (2nd parameter) for a given input texture.
  * -------------------------------------------------------------------------- */
-void calculateGradientsTexture(Texture *texture, Texture *gradient);
+void calculateGradientsTexture(Texture *texture, Texture *gradient, int normal);
 
 /* Loads a texture.
  * -------------------------------------------------------------------------- */

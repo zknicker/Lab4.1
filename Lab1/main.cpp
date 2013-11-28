@@ -54,8 +54,32 @@ bool draw_shadows = false;
 bool draw_trackball = false;
 
 Cube *myCube;
+Cube *bumpedCube;
 Cylinder *myCylinder;
 Sphere *mySphere;
+Sphere *bumpedSphere;
+
+// User Defined Variables
+GLUquadricObj *quadratic;
+
+const float PI2 = 2.0*3.1415926535f;
+
+Matrix4fT   Transform   = {  1.0f,  0.0f,  0.0f,  0.0f,
+                             0.0f,  1.0f,  0.0f,  0.0f,
+                             0.0f,  0.0f,  1.0f,  0.0f,
+                             0.0f,  0.0f,  0.0f,  1.0f };
+
+Matrix3fT   LastRot     = {  1.0f,  0.0f,  0.0f,
+                             0.0f,  1.0f,  0.0f,
+                             0.0f,  0.0f,  1.0f };
+
+Matrix3fT   ThisRot     = {  1.0f,  0.0f,  0.0f,
+                             0.0f,  1.0f,  0.0f,
+                             0.0f,  0.0f,  1.0f };
+
+ArcBallT    ArcBall(window_size, window_size);
+Point2fT    MousePt;
+
 
 /* Initializes the desired model's (.obj) VBO and prepares it to be drawn.
  * -------------------------------------------------------------------------- */
@@ -186,6 +210,7 @@ void drawEnvironment(stack<mat4> *model_stack) {
 	model_stack->pop();
 }
 
+float sphere_rot = 0.0f;
 /* Main animation function. Draws the screen.
  * -------------------------------------------------------------------------- */
 void display(void) {
@@ -207,18 +232,24 @@ void display(void) {
 
 	// Update the light.
     scene.light_pos = glm::vec3(0.0, 2.0, -4.0);
-	glUniform3f(scene.phong_shader.lightMatId, 1.0, 1.0, 1.0);
 
 	// Create the transformation matrix stack.
 	stack<mat4> model_stack;
 	model_stack.push(scene.model);
 
 	// Draw trackball rotation.
-	scene.model = scene.model * trackball_rot;
+	//scene.model = scene.model * trackball_rot;
+	mat4 trackball_rotation = mat4(
+		Transform.M[0], Transform.M[1], Transform.M[2], Transform.M[3],
+		Transform.M[4], Transform.M[5], Transform.M[6], Transform.M[7],
+		Transform.M[8], Transform.M[9], Transform.M[10], Transform.M[11],
+		Transform.M[12], Transform.M[13], Transform.M[14], Transform.M[15]);
+	scene.model = scene.model * trackball_rotation;
 	model_stack.push(scene.model);
 
 	// Update plane normal.
-	vec4 plane_normal = trackball_rot * vec4(0.0, 1.0, 0.0, 1.0);
+	//vec4 plane_normal = trackball_rot * vec4(0.0, 1.0, 0.0, 1.0);
+	vec4 plane_normal = vec4(0.0, 1.0, 0.0, 1.0);
 	scene.shadow_shader.plane_normal = vec3(plane_normal.x, plane_normal.y, plane_normal.z);
 
 	// Draw trackball.
@@ -231,7 +262,7 @@ void display(void) {
 	}
     
 	// Draw environment.
-	drawEnvironment(&model_stack);
+	//drawEnvironment(&model_stack);
 	scene.model = model_stack.top();
     
 	// Global transform all objects.
@@ -246,20 +277,15 @@ void display(void) {
 	scene.model = model_stack.top();
 	//glActiveTexture(GL_TEXTURE0 + 2);
 	//glBindTexture(GL_TEXTURE_CUBE_MAP, scene.phong_shader.cubemap_texture);
+	//myCylinder->draw(&scene, PHONG_SHADER);
+	glEnable(GL_TEXTURE_2D);
 	glActiveTexture(GL_TEXTURE0 + 0);
+	glBindTexture(GL_TEXTURE_2D, scene.bumpmap_texture.id);
+	glEnable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0 + 1);
 	glBindTexture(GL_TEXTURE_2D, scene.bumpmap_gradients_texture.id);
-	mySphere->draw(&scene, PHONG_SHADER);
-	// Draw shadows.
-	if (draw_shadows) {
-		glEnable(GL_STENCIL_TEST);
-		glStencilFunc(GL_EQUAL, 1, ~0);
-		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
-
-		scene.model = model_stack.top();
-		mySphere->draw(&scene, SHADOW_SHADER);
-
-		glDisable(GL_STENCIL_TEST);
-	}
+	scene.model = glm::scale(scene.model, vec3(2.0, 0.001, 1.0));
+	bumpedCube->draw(&scene, BUMPMAP_SHADER);
 
 	// Reset wireframe?
 	if (draw_wireframes) glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
@@ -279,10 +305,11 @@ void mouseController(int button, int state, int x, int y) {
 	// Rotation
 	if (button == GLUT_LEFT_BUTTON) {
 		if (state == GLUT_DOWN) {
-			left_mouse_depressed = 1;
-			startTrackball (x, y, 0, 0, window_size, window_size);
-		} else {
-			left_mouse_depressed = 0;
+			MousePt.s.X = (GLfloat) x;
+            MousePt.s.Y = (GLfloat) y;
+
+			LastRot = ThisRot;
+			ArcBall.click(&MousePt);
 		}
 	}
 }
@@ -290,7 +317,14 @@ void mouseController(int button, int state, int x, int y) {
 /* Responses to mouse movement events.
  * -------------------------------------------------------------------------- */
 void motionController(int x, int y) {
-	last_x_movement = x; last_y_movement = y;
+	MousePt.s.X = (GLfloat) x;
+    MousePt.s.Y = (GLfloat) y;
+	Quat4fT     ThisQuat;
+
+    ArcBall.drag(&MousePt, &ThisQuat);
+    Matrix3fSetRotationFromQuat4f(&ThisRot, &ThisQuat);
+    Matrix3fMulMatrix3f(&ThisRot, &LastRot);
+    Matrix4fSetRotationFromMatrix3f(&Transform, &ThisRot);
 }
 
 /* Responses to keyboard key down events.
@@ -311,6 +345,14 @@ void keyboardController(unsigned char key, int x, int y)
 
 	if (key == 'p') {
 		draw_shadows = !draw_shadows;
+	}
+	
+	if (key == 'd') {
+		sphere_rot += 1.0f;
+	}
+
+	if (key == 'a') {
+		sphere_rot -= 1.0f;
 	}
 }
 
@@ -369,25 +411,8 @@ void loadCubeMap() {
 	}
 }
 
-void loadCubeMapTextures() {
-
-}
-
 int time_since_start = 0;
 void idleController() {
-
-	// Get delta time.
-	int new_time_since_start = glutGet(GLUT_ELAPSED_TIME);
-	int delta_time = new_time_since_start - time_since_start;
-	time_since_start = new_time_since_start;
-
-	// Trackball movement.
-	if (left_mouse_depressed == 1) {
-		float rot[4];
-		rollToTrackball (last_x_movement, last_y_movement, rot);
-		trackball_rot = glm::rotate(trackball_rot, rot[0] * 10.0f/1000.0f * delta_time, vec3(rot[1], rot[2], rot[3]));
-	}
-
 	glutPostRedisplay();
 }
 
@@ -431,8 +456,8 @@ int main(int argc, char **argv) {
 	setupPhongShader(&scene.phong_shader);
 	cout << "Initializing shadow shader... ";
 	setupShadowShader(&scene.shadow_shader);
-	cout << "Initializing picking shader... ";
-	setupPickingShader(&scene.picking_shader);
+	cout << "Initializing bump mapping shader... ";
+	setupBumpMapShader(&scene.bumpmap_shader);
 
 	// Setup bumpmap textures.
 	cout << "Reading bumpmap texture.\n";
@@ -440,12 +465,16 @@ int main(int argc, char **argv) {
 	cout << "Loading bumpmap texture.\n";
 	loadTexture(&scene.bumpmap_texture);
 	cout << "Calculating gradient texture for bumpmap.\n";
-	calculateGradientsTexture(&scene.bumpmap_texture, &scene.bumpmap_gradients_texture);
+	calculateGradientsTexture(&scene.bumpmap_texture, &scene.bumpmap_gradients_texture, 20);
 	cout << "Loading gradient texture.\n";
 	loadTexture(&scene.bumpmap_gradients_texture);
 
     myCube = new Cube();
 	myCube->setUseTexture(1);
+    bumpedCube = new Cube();
+	bumpedCube->setShader(BUMPMAP_SHADER);
+	bumpedCube->setAmbient(0.25, 0.25, 0.25);
+	bumpedCube->setDiffuse(0.8, 0.8, 0.8);
 	myCylinder = new Cylinder();
 	myCylinder->setUseTexture(1);
 	myCylinder->setLightTexture(1);
@@ -454,15 +483,15 @@ int main(int argc, char **argv) {
 	mySphere->setUseTexture(1);
 	mySphere->setLightTexture(1);
 	mySphere->setReflectCubemap(0);
-
-	// Setup texture sampler.
-	glUseProgram(scene.phong_shader.program);
-	glUniform1i(scene.phong_shader.tex_sampler, 0);
+	bumpedSphere = new Sphere();
+	bumpedSphere->setShader(BUMPMAP_SHADER);
+	bumpedSphere->setUseTexture(1);
+	bumpedSphere->setLightTexture(1);
+	bumpedSphere->setReflectCubemap(0);
 
 	// Load CubeMap textures.
-	cout << "Loading the 6 cubemap textures.\n";
-	loadCubeMap();
-	loadCubeMapTextures();
+	//cout << "Loading the 6 cubemap textures.\n";
+	//loadCubeMap();
 
 	cout << "\n----------------------------------------\n";
 	cout << "(q) to quit.\n(w) to toggle wireframes.\n";

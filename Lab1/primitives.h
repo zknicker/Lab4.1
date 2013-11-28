@@ -50,6 +50,7 @@ typedef struct {
 	float normal[4];
 	float color[4]; 
 	float texcoord[2];
+	float tangent[4];
 } Vertex; 
 
 typedef struct {

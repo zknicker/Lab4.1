@@ -165,11 +165,40 @@ void setupPhongShader(PhongShader* phong_shader) {
 	phong_shader->light_texture_id = glGetUniformLocation(phong_shader->program, "light_texture");
 	phong_shader->reflect_cubemap_id = glGetUniformLocation(phong_shader->program, "reflect_cubemap");
 	phong_shader->tex_sampler = glGetUniformLocation(phong_shader->program, "tex_sampler");
+	phong_shader->cubemap_sampler = glGetUniformLocation(phong_shader->program, "cube_map_sampler"); 
     
     // Default shader vars.
     glUniform1i(phong_shader->use_texture_id, 0);
     glUniform1i(phong_shader->light_texture_id, 1);
     glUniform1i(phong_shader->reflect_cubemap_id, 0);
+	glUniform1i(phong_shader->tex_sampler, 0);
+	glUniform1i(phong_shader->cubemap_sampler, 2);
+}
+
+/* Quick and easy method to initialize a phong shader. Takes care of 
+ * binding the program and getting uniform locations.
+ * -------------------------------------------------------------------------- */
+void setupBumpMapShader(BumpMapShader* bumpmap_shader) {
+	bumpmap_shader->program = setupShaders("bump");
+
+	bumpmap_shader->viewId = glGetUniformLocation(bumpmap_shader->program, "view");
+    bumpmap_shader->modelId = glGetUniformLocation(bumpmap_shader->program, "model");
+    bumpmap_shader->projectionId = glGetUniformLocation(bumpmap_shader->program, "projection");
+    bumpmap_shader->normalId = glGetUniformLocation(bumpmap_shader->program, "normal");
+    bumpmap_shader->lightId = glGetUniformLocation(bumpmap_shader->program, "light_world");
+    bumpmap_shader->cameraPosId = glGetUniformLocation(bumpmap_shader->program, "camera_world");
+	bumpmap_shader->lightMatId = glGetUniformLocation(bumpmap_shader->program, "light_mat");
+	bumpmap_shader->ambientMatId = glGetUniformLocation(bumpmap_shader->program, "ambient_mat");
+	bumpmap_shader->diffuseMatId = glGetUniformLocation(bumpmap_shader->program, "diffuse_mat");
+	bumpmap_shader->specularMatId = glGetUniformLocation(bumpmap_shader->program, "specular_mat");
+	bumpmap_shader->specularPowerId = glGetUniformLocation(bumpmap_shader->program, "specular_power");
+	bumpmap_shader->tex_sampler = glGetUniformLocation(bumpmap_shader->program, "tex_sampler");
+	bumpmap_shader->tex_normals_sampler = glGetUniformLocation(bumpmap_shader->program, "tex_normals_sampler");
+    
+    // Default shader vars.
+	glUseProgram(bumpmap_shader->program);
+	glUniform1i(bumpmap_shader->tex_sampler, 0);
+	glUniform1i(bumpmap_shader->tex_normals_sampler, 1);
 }
 
 /* Quick and easy method to initialize a shadow shader. Takes care of 
@@ -208,6 +237,7 @@ void updatePhongShader(Scene *scene) {
 	glUniformMatrix3fv(scene->phong_shader.normalId, 1, GL_FALSE, &normal_matrix[0][0]);
 	glUniform3f(scene->phong_shader.cameraPosId, scene->camera_pos.x, scene->camera_pos.y, scene->camera_pos.z);
 	glUniform3f(scene->phong_shader.lightId, scene->light_pos.x, scene->light_pos.y, scene->light_pos.z);
+	glUniform3f(scene->phong_shader.lightMatId, 1.0, 1.0, 1.0);
 }
 
 /* Updates simple uniforms in the shadow shader.
@@ -221,6 +251,20 @@ void updateShadowShader(Scene *scene) {
 	glUniformMatrix3fv(scene->shadow_shader.normalId, 1, GL_FALSE, &normal_matrix[0][0]);
 	glUniform3f(scene->shadow_shader.planeNormalId, scene->shadow_shader.plane_normal.x, scene->shadow_shader.plane_normal.y, scene->shadow_shader.plane_normal.z);
 	glUniform3f(scene->shadow_shader.lightId, scene->light_pos.x, scene->light_pos.y, scene->light_pos.z);
+}
+
+/* Updates simple uniforms in the bump mapping shader.
+ * -------------------------------------------------------------------------- */
+void updateBumpMapShader(Scene *scene) {
+	mat3 normal_matrix = mat3(transpose(inverse(scene->view * scene->model)));
+
+	glUniformMatrix4fv(scene->bumpmap_shader.modelId, 1, GL_FALSE, &scene->model[0][0]);
+    glUniformMatrix4fv(scene->bumpmap_shader.viewId, 1, GL_FALSE, &scene->view[0][0]);
+    glUniformMatrix4fv(scene->bumpmap_shader.projectionId, 1, GL_FALSE, &scene->projection[0][0]);
+	glUniformMatrix3fv(scene->bumpmap_shader.normalId, 1, GL_FALSE, &normal_matrix[0][0]);
+	glUniform3f(scene->bumpmap_shader.cameraPosId, scene->camera_pos.x, scene->camera_pos.y, scene->camera_pos.z);
+	glUniform3f(scene->bumpmap_shader.lightId, scene->light_pos.x, scene->light_pos.y, scene->light_pos.z);
+	glUniform3f(scene->bumpmap_shader.lightMatId, 1.0, 1.0, 1.0);
 }
 
 /* Updates simple uniforms in the picking shader.
@@ -260,7 +304,7 @@ void readTexture(Texture *texture, char* texture_name) {
 	fclose(in); 
 }
 
-void calculateGradientsTexture(Texture *texture, Texture *gradient) {
+void calculateGradientsTexture(Texture *texture, Texture *gradient, int normal) {
 	gradient->height = texture->height;
 	gradient->width = texture->width;
 	gradient->image.resize(gradient->height * gradient->width);
@@ -269,13 +313,15 @@ void calculateGradientsTexture(Texture *texture, Texture *gradient) {
 		for (int j = 0; j < texture->width; j++) {
 			int index = i * texture->width + j;
 			int index_vertical_next = ((i + 1) % texture->height) * texture->width + j;
-			int index_vertical_prev = ((i - 1) % texture->height) * texture->width + j;
+			int index_vertical_prev = ((i - 1 + texture->height) % texture->height) * texture->width + j;
 			int index_horizontal_next = i * texture->width + ((j + 1) % texture->width);
-			int index_horizontal_prev = i * texture->width + ((j - 1) % texture->width);
+			int index_horizontal_prev = i * texture->width + ((j - 1 + texture->width) % texture->width);
 
-			gradient->image[index].r = (unsigned char)((texture->image[index_vertical_next].r - texture->image[index_vertical_prev].r) / 2.0 + (texture->height / 2.0)); 
-			gradient->image[index].g = (unsigned char)((texture->image[index_horizontal_next].r - texture->image[index_horizontal_prev].r) / 2.0 + (texture->width / 2.0)); 
-			gradient->image[index].b = 20;  
+			//gradientImage[i][j][0] = (unsigned char)((texImage[(i+1)%256][j][0]-texImage[(i-1+256)%256][j][0])/2.0+128); 
+			//gradientImage[i][j][1] = (unsigned char)((texImage[i][(j+1)%256][0]-texImage[i][(j-1+256)%256][0])/2.0+128); 
+			gradient->image[index].r = (unsigned char)((texture->image[index_vertical_next].r - texture->image[index_vertical_prev].r) / 2.0 + (256 / 2.0)); 
+			gradient->image[index].g = (unsigned char)((texture->image[index_horizontal_next].r - texture->image[index_horizontal_prev].r) / 2.0 + (256 / 2.0)); 
+			gradient->image[index].b = normal;  
 			gradient->image[index].a = 255; 
 		}
 	}

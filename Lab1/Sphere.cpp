@@ -46,6 +46,10 @@ void Sphere::init() {
             float const y = sin(-1 * PI / 2.0f + PI * cur_stack * dStacks);
             float const z = sin(2 * PI * cur_slice * dSlices) * sin(PI * cur_stack * dStacks);
 
+			float const tx = cos(2 * PI * cur_slice * dSlices) * sin(PI * cur_stack * dStacks);
+            float const ty = sin(-1 * PI / 2.0f + PI * cur_stack * dStacks);
+            float const tz = sin(2 * PI * cur_slice * dSlices) * sin(PI * cur_stack * dStacks);
+
 			int vert = cur_stack * slices + cur_slice;
 
 			// Set x, y, and z coordinates for current vertex.
@@ -67,7 +71,7 @@ void Sphere::init() {
 			vertices[vert].normal[3] = 0;
 
 			// Texturing
-			vertices[vert].texcoord[0] = (float) cur_slice / (float) slices;
+			vertices[vert].texcoord[0] = 1.0f - (float) cur_slice / (float) slices;
 			vertices[vert].texcoord[1] = (float) cur_stack / (float) stacks;
 		}
 	}

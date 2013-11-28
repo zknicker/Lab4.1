@@ -67,6 +67,15 @@ void Cube::init() {
 	vertices[5].texcoord[0] = 1;	vertices[5].texcoord[1] = 0;
 	vertices[6].texcoord[0] = 0;	vertices[6].texcoord[1] = 0;
 	vertices[7].texcoord[0] = 0;	vertices[7].texcoord[1] = 1;
+
+	vertices[0].tangent[0] = 1;	vertices[0].tangent[1] = 0;	vertices[0].tangent[1] = -1;	vertices[0].tangent[1] = 0;
+	vertices[1].tangent[0] = 1;	vertices[1].tangent[1] = 0;	vertices[1].tangent[1] = -1;	vertices[1].tangent[1] = 0;
+	vertices[2].tangent[0] = 1;	vertices[2].tangent[1] = 0;	vertices[2].tangent[1] = -1;	vertices[2].tangent[1] = 0;
+	vertices[3].tangent[0] = 1;	vertices[3].tangent[1] = 0;	vertices[3].tangent[1] = -1;	vertices[3].tangent[1] = 0;
+	vertices[4].tangent[0] = 1;	vertices[4].tangent[1] = 0;	vertices[4].tangent[1] = -1;	vertices[4].tangent[1] = 0;
+	vertices[5].tangent[0] = 1;	vertices[5].tangent[1] = 0;	vertices[5].tangent[1] = -1;	vertices[5].tangent[1] = 0;
+	vertices[6].tangent[0] = 1;	vertices[6].tangent[1] = 0;	vertices[6].tangent[1] = -1;	vertices[6].tangent[1] = 0;
+	vertices[7].tangent[0] = 1;	vertices[7].tangent[1] = 0;	vertices[7].tangent[1] = -1;	vertices[7].tangent[1] = 0;
     
 	indices[0] = 2;     indices[1] = 3;     indices[2] = 7;     indices[3] = 6; // Top Face
 	indices[4] = 0;     indices[5] = 1;     indices[6] = 5;     indices[7] = 4; // Bottom Face
