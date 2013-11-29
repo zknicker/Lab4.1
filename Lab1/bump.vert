@@ -1,4 +1,5 @@
 
+#version 120
 // Bump Mapping Shader
 
 attribute vec3 vertex_model;
@@ -39,20 +40,20 @@ void main(){
 	normal_eye = (normal * vec3(normal_model)).xyz;
     
     // Tangent calculation (bump mapping).
-    vec3 bm_tangent = normalize(normal * tangent.xyz);
+    vec3 bm_tangent = vec3(view * model * vec4(normalize(normal * tangent.xyz), 1.0));
     
     // Binormal calculation (bump mapping).
-    vec3 bm_binormal = normalize(cross(normal_eye, bm_tangent));
+    vec3 bm_binormal = vec3(view * model * vec4(normalize(cross(normal_eye, bm_tangent)), 1.0));
     
     // Tangent space transformation matrix (bump mapping).
-    mat3 to_object_local = mat3(
+    mat3 to_tangent = mat3(
         bm_tangent.x, bm_binormal.x, normal_eye.x,
         bm_tangent.y, bm_binormal.y, normal_eye.y,
         bm_tangent.z, bm_binormal.z, normal_eye.z);
     
     // Bump mapping final calculations.
-    lightdir_tangent = normalize(to_object_local * point_light_world);
-    eyedir_tangent = normalize(to_object_local * eyedir_eye);
+    lightdir_tangent = normalize(to_tangent * point_light_world);
+    eyedir_tangent = to_tangent * eyedir_eye;
     
     // Texturing
     frag_tex_coord = tex_coord;

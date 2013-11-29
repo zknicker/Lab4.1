@@ -31,6 +31,7 @@
 #include "Cube.h"
 #include "Cylinder.h"
 #include "Sphere.h"
+#include "Torus.h"
 
 using namespace glm;
 using namespace std;
@@ -52,12 +53,14 @@ Scene scene;
 bool draw_wireframes = false;
 bool draw_shadows = false;
 bool draw_trackball = false;
+bool draw_bumpmap = true;
 
 Cube *myCube;
 Cube *bumpedCube;
 Cylinder *myCylinder;
 Sphere *mySphere;
 Sphere *bumpedSphere;
+Torus *bumpedTorus;
 
 // User Defined Variables
 GLUquadricObj *quadratic;
@@ -231,8 +234,8 @@ void display(void) {
     scene.model = glm::mat4(1.0);
 
 	// Update the light.
-    scene.light_pos = glm::vec3(0.0, 2.0, -4.0);
-
+    scene.light_pos = glm::vec3(0.0, 2.0, -15.0);
+    
 	// Create the transformation matrix stack.
 	stack<mat4> model_stack;
 	model_stack.push(scene.model);
@@ -248,8 +251,7 @@ void display(void) {
 	model_stack.push(scene.model);
 
 	// Update plane normal.
-	//vec4 plane_normal = trackball_rot * vec4(0.0, 1.0, 0.0, 1.0);
-	vec4 plane_normal = vec4(0.0, 1.0, 0.0, 1.0);
+    vec4 plane_normal = trackball_rot * vec4(0.0, 1.0, 0.0, 1.0);
 	scene.shadow_shader.plane_normal = vec3(plane_normal.x, plane_normal.y, plane_normal.z);
 
 	// Draw trackball.
@@ -262,12 +264,11 @@ void display(void) {
 	}
     
 	// Draw environment.
-	//drawEnvironment(&model_stack);
+	drawEnvironment(&model_stack);
 	scene.model = model_stack.top();
     
 	// Global transform all objects.
 	scene.model = glm::translate(scene.model, vec3(0.0, 0.0, 0.0));
-	scene.model = glm::scale(scene.model, vec3(3.0, 3.0, 3.0));
 	model_stack.push(scene.model);
 
 	// Draw wireframes?
@@ -275,18 +276,25 @@ void display(void) {
 
     // Draw objects.
 	scene.model = model_stack.top();
-	//glActiveTexture(GL_TEXTURE0 + 2);
-	//glBindTexture(GL_TEXTURE_CUBE_MAP, scene.phong_shader.cubemap_texture);
-	//myCylinder->draw(&scene, PHONG_SHADER);
-	glEnable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0 + 2);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, scene.phong_shader.cubemap_texture);
+    scene.model = glm::scale(scene.model, vec3(2.0, 2.0, 2.0));
+	myCylinder->draw(&scene, PHONG_SHADER);
+    
+    scene.model = model_stack.top();
+    
+    glEnable(GL_TEXTURE_2D);
 	glActiveTexture(GL_TEXTURE0 + 0);
 	glBindTexture(GL_TEXTURE_2D, scene.bumpmap_texture.id);
 	glEnable(GL_TEXTURE_2D);
 	glActiveTexture(GL_TEXTURE0 + 1);
 	glBindTexture(GL_TEXTURE_2D, scene.bumpmap_gradients_texture.id);
-	scene.model = glm::scale(scene.model, vec3(2.0, 0.001, 1.0));
-	bumpedCube->draw(&scene, BUMPMAP_SHADER);
-
+    if (draw_bumpmap) {
+        bumpedTorus->draw(&scene, BUMPMAP_SHADER);
+    } else {
+        bumpedTorus->draw(&scene, PHONG_SHADER);
+    }
+    
 	// Reset wireframe?
 	if (draw_wireframes) glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
@@ -331,28 +339,24 @@ void motionController(int x, int y) {
  * -------------------------------------------------------------------------- */
 void keyboardController(unsigned char key, int x, int y)
 {
-	if (key == 'q') {
+	if (key == 'q' || key == 'Q') {
 		exit(1);
 	}
 
-	if (key == 'w') {
+	if (key == 'w' || key == 'W') {
 		draw_wireframes = !draw_wireframes;
 	}
 
-	if (key == 'v') {
+	if (key == 'v' || key == 'V') {
 		draw_trackball = !draw_trackball;
 	}
 
-	if (key == 'p') {
+	if (key == 'p' || key == 'P') {
 		draw_shadows = !draw_shadows;
 	}
 	
-	if (key == 'd') {
-		sphere_rot += 1.0f;
-	}
-
-	if (key == 'a') {
-		sphere_rot -= 1.0f;
+	if (key == 'b' || key == 'B') {
+		draw_bumpmap = !draw_bumpmap;
 	}
 }
 
@@ -465,7 +469,7 @@ int main(int argc, char **argv) {
 	cout << "Loading bumpmap texture.\n";
 	loadTexture(&scene.bumpmap_texture);
 	cout << "Calculating gradient texture for bumpmap.\n";
-	calculateGradientsTexture(&scene.bumpmap_texture, &scene.bumpmap_gradients_texture, 20);
+	calculateGradientsTexture(&scene.bumpmap_texture, &scene.bumpmap_gradients_texture, 10);
 	cout << "Loading gradient texture.\n";
 	loadTexture(&scene.bumpmap_gradients_texture);
 
@@ -489,9 +493,18 @@ int main(int argc, char **argv) {
 	bumpedSphere->setLightTexture(1);
 	bumpedSphere->setReflectCubemap(0);
 
+    bumpedTorus = new Torus();
+    bumpedTorus->setAmbient(0.1, 0.1, 0.1);
+    bumpedTorus->setDiffuse(0.6, 0.6, 0.6);
+    bumpedTorus->setSpecular(0.3, 0.3, 0.3);
+    bumpedTorus->setSpecularPower(10);
+	bumpedTorus->setUseTexture(1);
+	bumpedTorus->setLightTexture(1);
+	bumpedTorus->setReflectCubemap(0);
+    
 	// Load CubeMap textures.
-	//cout << "Loading the 6 cubemap textures.\n";
-	//loadCubeMap();
+	cout << "Loading the 6 cubemap textures.\n";
+	loadCubeMap();
 
 	cout << "\n----------------------------------------\n";
 	cout << "(q) to quit.\n(w) to toggle wireframes.\n";

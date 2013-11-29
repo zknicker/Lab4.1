@@ -168,6 +168,7 @@ void setupPhongShader(PhongShader* phong_shader) {
 	phong_shader->cubemap_sampler = glGetUniformLocation(phong_shader->program, "cube_map_sampler"); 
     
     // Default shader vars.
+    glUseProgram(phong_shader->program);
     glUniform1i(phong_shader->use_texture_id, 0);
     glUniform1i(phong_shader->light_texture_id, 1);
     glUniform1i(phong_shader->reflect_cubemap_id, 0);
@@ -270,9 +271,7 @@ void updateBumpMapShader(Scene *scene) {
 /* Updates simple uniforms in the picking shader.
  * -------------------------------------------------------------------------- */
 void updatePickingShader(Scene *scene) {
-	mat3 normal_matrix = mat3(transpose(inverse(scene->view * scene->model)));
-
-    glUniformMatrix4fv(scene->picking_shader.modelId, 1, GL_FALSE, &scene->model[0][0]);
+	glUniformMatrix4fv(scene->picking_shader.modelId, 1, GL_FALSE, &scene->model[0][0]);
     glUniformMatrix4fv(scene->picking_shader.viewId, 1, GL_FALSE, &scene->view[0][0]);
     glUniformMatrix4fv(scene->picking_shader.projectionId, 1, GL_FALSE, &scene->projection[0][0]);
 }
