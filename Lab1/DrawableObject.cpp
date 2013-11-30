@@ -23,7 +23,11 @@ DrawableObject::DrawableObject() {
 
 	// Field defaults.
 	use_texture = 0;
+    use_texture_glow = 0;
+    texture_glow_power = 1;
 	texture = 0;
+    reflect_cubemap = 0;
+    light_texture = 0;
 	draw_elements_mode = GL_QUADS;
 }
 
@@ -64,8 +68,8 @@ void DrawableObject::setSpecularPower(float power) {
     specular_power = power;
 }
 
-void DrawableObject::setUseTexture(int use) {
-    use_texture = use;
+void DrawableObject::setUseTexture(int should_use) {
+    use_texture = should_use;
 }
 
 void DrawableObject::setTexture(int texture) {
@@ -78,6 +82,14 @@ void DrawableObject::setReflectCubemap(int reflect_cubemap) {
 
 void DrawableObject::setLightTexture(int light_texture) {
     this->light_texture = light_texture;
+}
+
+void DrawableObject::setUseTextureGlow(int should_use) {
+    use_texture_glow = should_use;
+}
+
+void DrawableObject::setTextureGlowPower(float power) {
+    texture_glow_power = power;
 }
 
 void DrawableObject::setShader(int shader) {
@@ -95,9 +107,11 @@ void DrawableObject::draw(Scene *scene, int shader) {
 		glUniform3f(scene->phong_shader.diffuseMatId, diffuse[0], diffuse[1], diffuse[2]);
 		glUniform3f(scene->phong_shader.specularMatId, specular[0], specular[1], specular[2]);
 		glUniform1f(scene->phong_shader.specularPowerId, specular_power);
+        glUniform1f(scene->phong_shader.textureGlowPowerId, texture_glow_power);
 		glUniform1i(scene->phong_shader.use_texture_id, use_texture);
 		glUniform1i(scene->phong_shader.reflect_cubemap_id, reflect_cubemap);
 		glUniform1i(scene->phong_shader.light_texture_id, light_texture);
+		glUniform1i(scene->phong_shader.glow_id, use_texture_glow);
 		updatePhongShader(scene);
         
 	} else if (shader == SHADOW_SHADER) {

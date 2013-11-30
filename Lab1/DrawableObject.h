@@ -33,11 +33,13 @@ protected:
     float diffuse[3];
     float specular[3];
     float specular_power;
+    float texture_glow_power;
 	
     // Texturing
     int use_texture;
 	int light_texture;
     int reflect_cubemap;
+    int use_texture_glow;
     int texture;
     
     // Transformations
@@ -62,6 +64,8 @@ public:
     void setTexture(int texture);
     void setLightTexture(int light_texture);
     void setReflectCubemap(int reflect_cubemap);
+    void setUseTextureGlow(int should_use);
+    void setTextureGlowPower(float power);
     void setShader(int shader);
     
     float* getAmbient();

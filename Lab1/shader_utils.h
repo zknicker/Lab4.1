@@ -26,6 +26,7 @@ typedef struct {
 	GLuint specularMatId;
 	GLuint specularPowerId;
 	GLuint lightMatId;
+    GLuint textureGlowPowerId;
 	
 	GLuint cubemap_sampler;
 	GLuint cubemap_texture;
@@ -34,6 +35,7 @@ typedef struct {
 	GLuint use_texture_id;
 	GLuint light_texture_id;
 	GLuint reflect_cubemap_id;
+    GLuint glow_id;
 	GLuint tex_sampler;
 } PhongShader;
 

@@ -54,6 +54,7 @@ bool draw_wireframes = false;
 bool draw_shadows = false;
 bool draw_trackball = false;
 bool draw_bumpmap = true;
+bool draw_glow = true;
 
 Cube *myCube;
 Cube *bumpedCube;
@@ -61,6 +62,8 @@ Cylinder *myCylinder;
 Sphere *mySphere;
 Sphere *bumpedSphere;
 Torus *bumpedTorus;
+
+vector<Sphere *> rotating_spheres;
 
 // User Defined Variables
 GLUquadricObj *quadratic;
@@ -153,7 +156,7 @@ void drawEnvironment(stack<mat4> *model_stack) {
 	double wall_width = 0.05;
 	
 	model_stack->push(scene.model);
-
+    
 	// Using texture 0
 	glActiveTexture(GL_TEXTURE0 + 0);
 
@@ -213,7 +216,7 @@ void drawEnvironment(stack<mat4> *model_stack) {
 	model_stack->pop();
 }
 
-float sphere_rot = 0.0f;
+float anim;
 /* Main animation function. Draws the screen.
  * -------------------------------------------------------------------------- */
 void display(void) {
@@ -257,7 +260,7 @@ void display(void) {
 	// Draw trackball.
 	if (draw_trackball) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		scene.model = glm::scale(scene.model, vec3(5.0, 5.0, 5.0));
+		scene.model = glm::scale(scene.model, vec3(15.0, 15.0, 15.0));
 		drawSphere(&scene, false);
 		scene.model = model_stack.top();
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -274,24 +277,52 @@ void display(void) {
 	// Draw wireframes?
 	if (draw_wireframes) glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
-    // Draw objects.
+    scene.model = glm::rotate(scene.model, -15.0f, vec3(1.0, 0.0, 0.0));
+    model_stack.push(scene.model);
+    
+    // Draw spheres.
 	scene.model = model_stack.top();
 	glActiveTexture(GL_TEXTURE0 + 2);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, scene.phong_shader.cubemap_texture);
-    scene.model = glm::scale(scene.model, vec3(2.0, 2.0, 2.0));
-	myCylinder->draw(&scene, PHONG_SHADER);
+    for (int i = 0; i < rotating_spheres.size(); i++) {
+        float r = 5;
+        float variance = i * 360.0 / rotating_spheres.size();
+        float x = 2 * r * sin(anim + variance);
+        float z = 0.0;
+        float y = r * sin(2 * anim + variance);
+        float s = 1.0 + i / rotating_spheres.size() * 2.0;
+        glm::scale(scene.model, vec3(s, s, s));
+        scene.model = glm::rotate(scene.model, variance, vec3(0.0, 1.0, 0.0));
+        scene.model = glm::translate(scene.model, vec3(x, y, z));
+        rotating_spheres[i]->draw(&scene, PHONG_SHADER);
+        scene.model = model_stack.top();
+    }
     
     scene.model = model_stack.top();
     
+    // Draw torus.
     glEnable(GL_TEXTURE_2D);
 	glActiveTexture(GL_TEXTURE0 + 0);
 	glBindTexture(GL_TEXTURE_2D, scene.bumpmap_texture.id);
 	glEnable(GL_TEXTURE_2D);
 	glActiveTexture(GL_TEXTURE0 + 1);
 	glBindTexture(GL_TEXTURE_2D, scene.bumpmap_gradients_texture.id);
+    scene.model = glm::rotate(scene.model, 90.0f, vec3(1.0, 0.0, 0.0));
     if (draw_bumpmap) {
         bumpedTorus->draw(&scene, BUMPMAP_SHADER);
     } else {
+        if (draw_glow) {
+            glEnable(GL_TEXTURE_2D);
+            glActiveTexture(GL_TEXTURE0 + 0);
+            bumpedTorus->setTexture(scene.phong_shader.cubemap_textures[3]);
+            bumpedTorus->setUseTextureGlow(1);
+            bumpedTorus->setTextureGlowPower(abs(sin(anim * 8)));
+        } else {
+            glEnable(GL_TEXTURE_2D);
+            glActiveTexture(GL_TEXTURE0 + 0);
+            bumpedTorus->setTexture(scene.bumpmap_texture.id);
+            bumpedTorus->setUseTextureGlow(0);
+        }
         bumpedTorus->draw(&scene, PHONG_SHADER);
     }
     
@@ -327,7 +358,7 @@ void mouseController(int button, int state, int x, int y) {
 void motionController(int x, int y) {
 	MousePt.s.X = (GLfloat) x;
     MousePt.s.Y = (GLfloat) y;
-	Quat4fT     ThisQuat;
+	Quat4fT ThisQuat;
 
     ArcBall.drag(&MousePt, &ThisQuat);
     Matrix3fSetRotationFromQuat4f(&ThisRot, &ThisQuat);
@@ -358,11 +389,24 @@ void keyboardController(unsigned char key, int x, int y)
 	if (key == 'b' || key == 'B') {
 		draw_bumpmap = !draw_bumpmap;
 	}
+    
+    if (key == 'g' || key == 'G') {
+        draw_glow = !draw_glow;
+    }
+    
+    if (key == 'r' || key == 'R') {
+        Transform = {
+            1.0f,  0.0f,  0.0f,  0.0f,
+            0.0f,  1.0f,  0.0f,  0.0f,
+            0.0f,  0.0f,  1.0f,  0.0f,
+            0.0f,  0.0f,  0.0f,  1.0f
+        };
+    }
 }
 
 void loadCubeMap() {
 
-	glEnable(GL_TEXTURE_CUBE_MAP); 
+	glEnable(GL_TEXTURE_CUBE_MAP);
 	glGenTextures(1, &scene.phong_shader.cubemap_texture); 
 	glActiveTexture(GL_TEXTURE0 + 2);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, scene.phong_shader.cubemap_texture); 
@@ -415,8 +459,16 @@ void loadCubeMap() {
 	}
 }
 
-int time_since_start = 0;
+int old_time_since_start = 0;
 void idleController() {
+    // Get delta time.
+    int time_since_start = glutGet(GLUT_ELAPSED_TIME);
+    int delta_time = time_since_start - old_time_since_start;
+    old_time_since_start = time_since_start;
+    
+    anim += .0001 * delta_time;
+    if (anim > 360) anim -= 360;
+    
 	glutPostRedisplay();
 }
 
@@ -475,6 +527,7 @@ int main(int argc, char **argv) {
 
     myCube = new Cube();
 	myCube->setUseTexture(1);
+    myCube->setLightTexture(0);
     bumpedCube = new Cube();
 	bumpedCube->setShader(BUMPMAP_SHADER);
 	bumpedCube->setAmbient(0.25, 0.25, 0.25);
@@ -496,11 +549,23 @@ int main(int argc, char **argv) {
     bumpedTorus = new Torus();
     bumpedTorus->setAmbient(0.1, 0.1, 0.1);
     bumpedTorus->setDiffuse(0.6, 0.6, 0.6);
-    bumpedTorus->setSpecular(0.3, 0.3, 0.3);
-    bumpedTorus->setSpecularPower(10);
+    bumpedTorus->setSpecular(0.6, 0.6, 0.6);
+    bumpedTorus->setSpecularPower(6);
 	bumpedTorus->setUseTexture(1);
 	bumpedTorus->setLightTexture(1);
 	bumpedTorus->setReflectCubemap(0);
+    
+    rotating_spheres.resize(20);
+    for (int i = 0; i < rotating_spheres.size(); i++) {
+        rotating_spheres[i] = new Sphere();
+        rotating_spheres[i]->setUseTexture(1);
+        rotating_spheres[i]->setReflectCubemap(1);
+        rotating_spheres[i]->setLightTexture(1);
+        rotating_spheres[i]->setAmbient(0.0, 0.0, 0.0);
+        rotating_spheres[i]->setDiffuse(0.6, 0.6, 0.6);
+        rotating_spheres[i]->setSpecular(0.4, 0.4, 0.4);
+        rotating_spheres[i]->setSpecularPower(20);
+    }
     
 	// Load CubeMap textures.
 	cout << "Loading the 6 cubemap textures.\n";

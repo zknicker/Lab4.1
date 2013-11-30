@@ -161,17 +161,20 @@ void setupPhongShader(PhongShader* phong_shader) {
 	phong_shader->diffuseMatId = glGetUniformLocation(phong_shader->program, "diffuse_mat");
 	phong_shader->specularMatId = glGetUniformLocation(phong_shader->program, "specular_mat");
 	phong_shader->specularPowerId = glGetUniformLocation(phong_shader->program, "specular_power");
+	phong_shader->textureGlowPowerId = glGetUniformLocation(phong_shader->program, "glow_power");
 	phong_shader->use_texture_id = glGetUniformLocation(phong_shader->program, "use_texture");
 	phong_shader->light_texture_id = glGetUniformLocation(phong_shader->program, "light_texture");
 	phong_shader->reflect_cubemap_id = glGetUniformLocation(phong_shader->program, "reflect_cubemap");
+    phong_shader->glow_id = glGetUniformLocation(phong_shader->program, "use_texture_glow");
 	phong_shader->tex_sampler = glGetUniformLocation(phong_shader->program, "tex_sampler");
-	phong_shader->cubemap_sampler = glGetUniformLocation(phong_shader->program, "cube_map_sampler"); 
+	phong_shader->cubemap_sampler = glGetUniformLocation(phong_shader->program, "cube_map_sampler");
     
     // Default shader vars.
     glUseProgram(phong_shader->program);
     glUniform1i(phong_shader->use_texture_id, 0);
     glUniform1i(phong_shader->light_texture_id, 1);
     glUniform1i(phong_shader->reflect_cubemap_id, 0);
+    glUniform1i(phong_shader->glow_id, 0);
 	glUniform1i(phong_shader->tex_sampler, 0);
 	glUniform1i(phong_shader->cubemap_sampler, 2);
 }
