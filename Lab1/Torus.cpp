@@ -4,7 +4,7 @@
 //  Extension of DrawableObject to facilitate the drawing of the torus primitive.
 //
 
-#include "Torus.h"
+#include "torus.h"
 #include "platform.h"
 
 using namespace std;

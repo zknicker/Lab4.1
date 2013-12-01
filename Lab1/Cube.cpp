@@ -4,7 +4,7 @@
 //  Extension of DrawableObject to facilitate the drawing of the cube primitive.
 //
 
-#include "Cube.h"
+#include "cube.h"
 #include "platform.h"
 
 using namespace std;

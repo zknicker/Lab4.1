@@ -1,3 +1,5 @@
+// Taken from: http://nehe.gamedev.net/tutorial/arcball_rotation/19003/
+
 /** KempoApi: The Turloc Toolkit *****************************/
 /** *    *                                                  **/
 /** **  **  Filename: ArcBall.h                             **/

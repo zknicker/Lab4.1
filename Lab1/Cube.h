@@ -6,9 +6,11 @@
 #ifndef CUBE_H
 #define CUBE_H
 
+#define CUBE_SIZE 1
+
 #include <iostream>
 #include "platform.h"
-#include "DrawableObject.h"
+#include "drawable_object.h"
 
 using namespace std;
 

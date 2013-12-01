@@ -8,7 +8,7 @@
 
 #include <iostream>
 #include "platform.h"
-#include "DrawableObject.h"
+#include "drawable_object.h"
 
 using namespace std;
 

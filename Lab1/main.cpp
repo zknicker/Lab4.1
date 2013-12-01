@@ -14,7 +14,12 @@
  *   - When bump mapping is disabled, the torus is drawn with
  *     a flat earth texture that glowingly pulses. That is,
  *     it shifts between a normally lit earth texture and a
- *     glowing/bloomed earth texture.
+ *     glowing/bloomed earth texture. This glowing is 
+ *	   accomplished via a setting in the phong shader which 
+ *     results in the outputted texture-colored fragment having 
+ *     been modified to appear as if glowing by some 
+ *     "glow power". See the phong_tex.frag to see this 
+ *     implementation.
  *
  * (q) quit the program.
  * (w) enable wireframes.
@@ -36,13 +41,11 @@
 
 #include "platform.h"
 #include "shader_utils.h"
-#include "obj_utils.h"
-#include "primitives.h"
 #include "trackball.h"
-#include "Cube.h"
-#include "Cylinder.h"
-#include "Sphere.h"
-#include "Torus.h"
+#include "cube.h"
+#include "cylinder.h"
+#include "sphere.h"
+#include "torus.h"
 
 using namespace glm;
 using namespace std;
@@ -67,16 +70,17 @@ bool draw_trackball = false;
 bool draw_bumpmap = true;
 bool draw_glow = true;
 
-Cube *myCube;
-Cube *bumpedCube;
-Cylinder *myCylinder;
-Sphere *mySphere;
-Sphere *bumpedSphere;
+/* Object in the scene. */
+Cube *wallCube;
+Sphere *trackballSphere;
 Torus *bumpedTorus;
-
 vector<Sphere *> rotating_spheres;
 
-// User Defined Variables
+/* Scene animation variable representing stage in animation. */
+float anim;
+
+/* Trackball vars 
+   Attribution: http://nehe.gamedev.net/tutorial/arcball_rotation/19003/ */
 GLUquadricObj *quadratic;
 
 const float PI2 = 2.0*3.1415926535f;
@@ -97,69 +101,6 @@ Matrix3fT   ThisRot     = {  1.0f,  0.0f,  0.0f,
 ArcBallT    ArcBall(window_size, window_size);
 Point2fT    MousePt;
 
-
-/* Initializes the desired model's (.obj) VBO and prepares it to be drawn.
- * -------------------------------------------------------------------------- */
-void initObj(string obj_path) {
-	// Read our .obj file
-	ifstream ifile(obj_path);
-	obj = LoadOBJ(ifile);
-
-	// Load it into a VBO
-	glGenBuffers(1, &obj_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, obj_buffer);
-	glBufferData(GL_ARRAY_BUFFER, obj.size() * sizeof(Vertex), &obj[0], GL_STATIC_DRAW);
-}
-
-/* Draws the desired model (.obj).
- * -------------------------------------------------------------------------- */
-void drawObj(bool shadow) {
-    
-    GLuint c0, c1, c2;
-    
-	// Matrices
-	scene.model = glm::scale(scene.model, vec3(0.1, 0.1, 0.1));
-	
-	if (!shadow) {
-		glUseProgram(scene.phong_shader.program);
-		glUniform3f(scene.phong_shader.ambientMatId, 0.2, 0, 0);
-		glUniform3f(scene.phong_shader.diffuseMatId, 0.7, 0, 0);
-		glUniform3f(scene.phong_shader.specularMatId, 0.3, 0.3, 0.3);
-		glUniform1f(scene.phong_shader.specularPowerId, 5);
-		glUniform1i(scene.phong_shader.use_texture_id, 0);
-		updatePhongShader(&scene);
-        
-        c0 = glGetAttribLocation(scene.phong_shader.program, "vertex_model");
-        c1 = glGetAttribLocation(scene.phong_shader.program, "normal_model");
-        c2 = glGetAttribLocation(scene.phong_shader.program, "tex_coord");
-
-	} else {
-		glUseProgram(scene.shadow_shader.program);
-		updateShadowShader(&scene);
-        
-        c0 = glGetAttribLocation(scene.shadow_shader.program, "vertex_model");
-        c1 = glGetAttribLocation(scene.shadow_shader.program, "normal_model");
-        c2 = glGetAttribLocation(scene.shadow_shader.program, "tex_coord");
-	}
-	
-	// Drawing
-    glBindBuffer(GL_ARRAY_BUFFER, obj_buffer);
-    glEnableVertexAttribArray(0);
-	glEnableVertexAttribArray(1);
-	glEnableVertexAttribArray(2);
-
-    glVertexAttribPointer(c0, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)0); // Vertices
-    glVertexAttribPointer(c1, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)16); // Normals
-    glVertexAttribPointer(c2, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)48); // Texture Coords
-
-    int size = (int) obj.size();
-    glDrawArrays(GL_TRIANGLES, 0, size);
-
-    glDisableVertexAttribArray(0);
-    glDisableVertexAttribArray(1);
-	glEnableVertexAttribArray(2);
-}
-double myrot = 0.0;
 /* Draws a six sided cube representing the environment.
  * -------------------------------------------------------------------------- */
 void drawEnvironment(stack<mat4> *model_stack) {
@@ -182,7 +123,7 @@ void drawEnvironment(stack<mat4> *model_stack) {
 	scene.model = glm::scale(scene.model, vec3(room_size, wall_width, room_size));
 	scene.model = glm::translate(scene.model, vec3(0.0, -room_size * 0.5 * (1.0 / wall_width), 0.0));
 	glBindTexture(GL_TEXTURE_2D, scene.phong_shader.cubemap_textures[3]);
-	myCube->draw(&scene, PHONG_SHADER);
+	wallCube->draw(&scene, PHONG_SHADER);
 
 	glDisable(GL_POLYGON_OFFSET_FILL);
 	glDisable(GL_STENCIL_TEST);
@@ -192,7 +133,7 @@ void drawEnvironment(stack<mat4> *model_stack) {
 	scene.model = glm::rotate(scene.model, 180.0f, vec3(0.0, 1.0, 0.0));
 	scene.model = glm::rotate(scene.model, 180.0f, vec3(0.0, 0.0, 1.0));
 	glBindTexture(GL_TEXTURE_2D, scene.phong_shader.cubemap_textures[2]);
-	myCube->draw(&scene, PHONG_SHADER);
+	wallCube->draw(&scene, PHONG_SHADER);
 
 	// Draw positive X wall.
 	scene.model = model_stack->top();
@@ -201,13 +142,13 @@ void drawEnvironment(stack<mat4> *model_stack) {
 	scene.model = glm::rotate(scene.model, -90.0f, vec3(0.0, 1.0, 0.0));
 	scene.model = glm::scale(scene.model, vec3(room_size, wall_width, room_size));
 	glBindTexture(GL_TEXTURE_2D, scene.phong_shader.cubemap_textures[0]);
-	myCube->draw(&scene, PHONG_SHADER);
+	wallCube->draw(&scene, PHONG_SHADER);
 
 	// Draw negative X wall.
 	scene.model = glm::translate(scene.model, vec3(0.0, room_size * (1.0 / wall_width), 0.0));
 	scene.model = glm::rotate(scene.model, 180.0f, vec3(0.0, 0.0, 1.0));
 	glBindTexture(GL_TEXTURE_2D, scene.phong_shader.cubemap_textures[1]);
-	myCube->draw(&scene, PHONG_SHADER);
+	wallCube->draw(&scene, PHONG_SHADER);
 	
 	// Draw positive Z wall.
 	scene.model = model_stack->top();
@@ -215,19 +156,18 @@ void drawEnvironment(stack<mat4> *model_stack) {
 	scene.model = glm::translate(scene.model, vec3(0.0, -room_size / 2.0, 0.0));
 	scene.model = glm::scale(scene.model, vec3(room_size, wall_width, room_size));
 	glBindTexture(GL_TEXTURE_2D, scene.phong_shader.cubemap_textures[4]);
-	myCube->draw(&scene, PHONG_SHADER);
+	wallCube->draw(&scene, PHONG_SHADER);
 
 	// Draw negative Z wall.
 	scene.model = glm::translate(scene.model, vec3(0.0, room_size * (1.0 / wall_width), 0.0));
 	scene.model = glm::rotate(scene.model, 180.0f, vec3(1.0, 0.0, 0.0));
 	scene.model = glm::rotate(scene.model, 180.0f, vec3(0.0, 1.0, 0.0));
 	glBindTexture(GL_TEXTURE_2D, scene.phong_shader.cubemap_textures[5]);
-	myCube->draw(&scene, PHONG_SHADER);
+	wallCube->draw(&scene, PHONG_SHADER);
 
 	model_stack->pop();
 }
 
-float anim;
 /* Main animation function. Draws the screen.
  * -------------------------------------------------------------------------- */
 void display(void) {
@@ -238,7 +178,7 @@ void display(void) {
 	glUseProgram(scene.phong_shader.program);
 
 	// Camera vars.
-	scene.camera_pos = glm::vec3(0, 2.0, -10.0);
+	scene.camera_pos = glm::vec3(0, 2.5, -12.0);
 	vec3 center = vec3(0, 0, 0);
 	vec3 up = vec3(0, 1, 0);
 
@@ -272,7 +212,7 @@ void display(void) {
 	if (draw_trackball) {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 		scene.model = glm::scale(scene.model, vec3(15.0, 15.0, 15.0));
-		drawSphere(&scene, false);
+		trackballSphere->draw(&scene, PHONG_SHADER);
 		scene.model = model_stack.top();
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 	}
@@ -404,15 +344,6 @@ void keyboardController(unsigned char key, int x, int y)
     if (key == 'g' || key == 'G') {
         draw_glow = !draw_glow;
     }
-    
-    if (key == 'r' || key == 'R') {
-        Transform = {
-            1.0f,  0.0f,  0.0f,  0.0f,
-            0.0f,  1.0f,  0.0f,  0.0f,
-            0.0f,  0.0f,  1.0f,  0.0f,
-            0.0f,  0.0f,  0.0f,  1.0f
-        };
-    }
 }
 
 void loadCubeMap() {
@@ -472,7 +403,7 @@ void loadCubeMap() {
 
 int old_time_since_start = 0;
 void idleController() {
-    // Get delta time.
+    // Get delta time (thanks to http://gamedev.stackexchange.com/questions/13008/how-to-get-and-use-delta-time)
     int time_since_start = glutGet(GLUT_ELAPSED_TIME);
     int delta_time = time_since_start - old_time_since_start;
     old_time_since_start = time_since_start;
@@ -510,9 +441,6 @@ int main(int argc, char **argv) {
 	if (!glewIsSupported("GL_VERSION_3_0")) {
 		cout << "Could not detect OpenGL 3.0. This could mean trouble.\n";
 	}
-
-	cout << "Loading the cube, cylinder, and sphere primitives.\n";
-	initPrimitives();
     
 	// Setup the shaders.
 	cout << "Initializing phong shader... ";
@@ -532,28 +460,11 @@ int main(int argc, char **argv) {
 	cout << "Loading gradient texture.\n";
 	loadTexture(&scene.bumpmap_gradients_texture);
 
-    myCube = new Cube();
-	myCube->setUseTexture(1);
-    myCube->setLightTexture(0);
-    
-    bumpedCube = new Cube();
-	bumpedCube->setAmbient(0.25, 0.25, 0.25);
-	bumpedCube->setDiffuse(0.8, 0.8, 0.8);
-    
-	myCylinder = new Cylinder();
-	myCylinder->setUseTexture(1);
-	myCylinder->setLightTexture(1);
-	myCylinder->setReflectCubemap(1);
-    
-	mySphere = new Sphere();
-	mySphere->setUseTexture(1);
-	mySphere->setLightTexture(1);
-	mySphere->setReflectCubemap(0);
-    
-	bumpedSphere = new Sphere();
-	bumpedSphere->setUseTexture(1);
-	bumpedSphere->setLightTexture(1);
-	bumpedSphere->setReflectCubemap(0);
+    wallCube = new Cube();
+	wallCube->setUseTexture(1);
+    wallCube->setLightTexture(0);
+
+	trackballSphere = new Sphere();
 
     bumpedTorus = new Torus();
     bumpedTorus->setAmbient(0.1, 0.1, 0.1);

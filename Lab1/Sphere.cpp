@@ -4,7 +4,7 @@
 //  Extension of DrawableObject to facilitate the drawing of the sphere primitive.
 //
 
-#include "Sphere.h"
+#include "sphere.h"
 #include "platform.h"
 
 using namespace std;

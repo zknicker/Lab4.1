@@ -4,7 +4,7 @@
 //  Extension of DrawableObject to facilitate the drawing of the cylinder primitive.
 //
 
-#include "Cylinder.h"
+#include "cylinder.h"
 #include "platform.h"
 
 using namespace std;
