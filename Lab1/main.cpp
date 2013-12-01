@@ -1,16 +1,27 @@
 /* ------------------------------------------------------------
- * Lab 4 - Textures, Shadows, and a Trackball
+ * Lab 5: Space, The Final Frontier
  * CSE 5542
  * Zach Knickerbocker
  *
- * This program draws a scene which uses shader-implemented
- * lighting, shadows, and texture mapping. A trackball is also
- * implemented which enables rotation of the scene on all axis.
+ * This program draws a scene which utilizes techniques from
+ * previous labs, as well as both cube mapping and bump
+ * maaping. Specifically, the floating spheres are textured
+ * using a cube map of a space scene, and the torus is textured
+ * with an Earth which has been bump mapped. The gradients for
+ * said bump map were calculated using central difference.
+ *
+ * Extra points:
+ *   - When bump mapping is disabled, the torus is drawn with
+ *     a flat earth texture that glowingly pulses. That is,
+ *     it shifts between a normally lit earth texture and a
+ *     glowing/bloomed earth texture.
  *
  * (q) quit the program.
  * (w) enable wireframes.
- * (v) draw trackball.
- * (p) disable shadows.
+ * (v) draw/don't draw trackball.
+ * (b) disable/enable bump mapping.
+ * (g) disable/enable glow.
+ *
  * (left mouse button) hold and drag to rotate the scene.
  * ------------------------------------------------------------ */
 
@@ -502,11 +513,7 @@ int main(int argc, char **argv) {
 
 	cout << "Loading the cube, cylinder, and sphere primitives.\n";
 	initPrimitives();
-
-	// Get the obj from the command line param.
-	//cout << "Loading custom object: pumpkin.obj (887kb)\n";
-	//initObj("pumpkin.obj");
-
+    
 	// Setup the shaders.
 	cout << "Initializing phong shader... ";
 	setupPhongShader(&scene.phong_shader);
@@ -528,20 +535,22 @@ int main(int argc, char **argv) {
     myCube = new Cube();
 	myCube->setUseTexture(1);
     myCube->setLightTexture(0);
+    
     bumpedCube = new Cube();
-	bumpedCube->setShader(BUMPMAP_SHADER);
 	bumpedCube->setAmbient(0.25, 0.25, 0.25);
 	bumpedCube->setDiffuse(0.8, 0.8, 0.8);
+    
 	myCylinder = new Cylinder();
 	myCylinder->setUseTexture(1);
 	myCylinder->setLightTexture(1);
 	myCylinder->setReflectCubemap(1);
+    
 	mySphere = new Sphere();
 	mySphere->setUseTexture(1);
 	mySphere->setLightTexture(1);
 	mySphere->setReflectCubemap(0);
+    
 	bumpedSphere = new Sphere();
-	bumpedSphere->setShader(BUMPMAP_SHADER);
 	bumpedSphere->setUseTexture(1);
 	bumpedSphere->setLightTexture(1);
 	bumpedSphere->setReflectCubemap(0);
@@ -555,7 +564,7 @@ int main(int argc, char **argv) {
 	bumpedTorus->setLightTexture(1);
 	bumpedTorus->setReflectCubemap(0);
     
-    rotating_spheres.resize(20);
+    rotating_spheres.resize(30);
     for (int i = 0; i < rotating_spheres.size(); i++) {
         rotating_spheres[i] = new Sphere();
         rotating_spheres[i]->setUseTexture(1);
@@ -572,9 +581,11 @@ int main(int argc, char **argv) {
 	loadCubeMap();
 
 	cout << "\n----------------------------------------\n";
-	cout << "(q) to quit.\n(w) to toggle wireframes.\n";
+	cout << "(q) to quit.\n";
+    cout << "(w) to toggle wireframes.\n";
 	cout << "(v) to draw the trackball.\n";
-	cout << "(p) to disable shadows.\n";
+	cout << "(b) to disable bump mapping.\n";
+	cout << "(g) to disable glowing effect.\n";
 	cout << "(left mouse button) rotate the scene.";
 	glutMainLoop();
 
