@@ -179,6 +179,37 @@ void setupPhongShader(PhongShader* phong_shader) {
 	glUniform1i(phong_shader->cubemap_sampler, 2);
 }
 
+/* Quick and easy method to initialize a star shader. Takes care of 
+ * binding the program and getting uniform locations.
+ * -------------------------------------------------------------------------- */
+void setupStarShader(StarShader* star_shader) {
+	star_shader->program = setupShaders("star");
+
+	star_shader->viewId = glGetUniformLocation(star_shader->program, "view");
+    star_shader->modelId = glGetUniformLocation(star_shader->program, "model");
+    star_shader->projectionId = glGetUniformLocation(star_shader->program, "projection");
+    star_shader->normalId = glGetUniformLocation(star_shader->program, "normal");
+    star_shader->lightId = glGetUniformLocation(star_shader->program, "light_world");
+    star_shader->cameraPosId = glGetUniformLocation(star_shader->program, "camera_world");
+    star_shader->spectral_lookup_id = glGetUniformLocation(star_shader->program, "spectral_lookup");
+    star_shader->time_id = glGetUniformLocation(star_shader->program, "time");
+    star_shader->shade_corona_id = glGetUniformLocation(star_shader->program, "shade_corona");
+    star_shader->shade_halo_id = glGetUniformLocation(star_shader->program, "shade_halo");
+	star_shader->tex_primary = glGetUniformLocation(star_shader->program, "tex_primary");
+	star_shader->tex_color = glGetUniformLocation(star_shader->program, "tex_color");
+	star_shader->tex_spectral = glGetUniformLocation(star_shader->program, "tex_spectral");
+    
+    // Default shader vars.
+    glUseProgram(star_shader->program);
+    glUniform1f(star_shader->spectral_lookup_id, 0);
+    glUniform1f(star_shader->time_id, 0);
+    glUniform1i(star_shader->shade_corona_id, 0);
+    glUniform1i(star_shader->shade_halo_id, 0);
+	glUniform1i(star_shader->tex_primary, 10);
+	glUniform1i(star_shader->tex_color, 11);
+	glUniform1i(star_shader->tex_spectral, 12);
+}
+
 /* Quick and easy method to initialize a phong shader. Takes care of 
  * binding the program and getting uniform locations.
  * -------------------------------------------------------------------------- */
@@ -242,6 +273,19 @@ void updatePhongShader(Scene *scene) {
 	glUniform3f(scene->phong_shader.cameraPosId, scene->camera_pos.x, scene->camera_pos.y, scene->camera_pos.z);
 	glUniform3f(scene->phong_shader.lightId, scene->light_pos.x, scene->light_pos.y, scene->light_pos.z);
 	glUniform3f(scene->phong_shader.lightMatId, 1.0, 1.0, 1.0);
+}
+
+/* Updates simple uniforms in the phong shader.
+ * -------------------------------------------------------------------------- */
+void updateStarShader(Scene *scene) {
+	mat3 normal_matrix = mat3(transpose(inverse(scene->view * scene->model)));
+
+    glUniformMatrix4fv(scene->star_shader.modelId, 1, GL_FALSE, &scene->model[0][0]);
+    glUniformMatrix4fv(scene->star_shader.viewId, 1, GL_FALSE, &scene->view[0][0]);
+    glUniformMatrix4fv(scene->star_shader.projectionId, 1, GL_FALSE, &scene->projection[0][0]);
+	glUniformMatrix3fv(scene->star_shader.normalId, 1, GL_FALSE, &normal_matrix[0][0]);
+	glUniform3f(scene->star_shader.cameraPosId, scene->camera_pos.x, scene->camera_pos.y, scene->camera_pos.z);
+	glUniform3f(scene->star_shader.lightId, scene->light_pos.x, scene->light_pos.y, scene->light_pos.z);
 }
 
 /* Updates simple uniforms in the shadow shader.

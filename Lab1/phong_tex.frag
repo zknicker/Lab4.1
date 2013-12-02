@@ -41,7 +41,7 @@ void main(){
     vec3 diffuse = diffuse_mat * light_mat * diffuse_angle;
     vec3 specular = specular_mat * light_mat * pow(specular_angle, specular_power);
     
-    // Glow
+    // Glow (attribution: http://myheroics.wordpress.com/2008/09/04/glsl-bloom-shader/)
     if (use_texture == 1 && use_texture_glow == 1) {
         vec4 sum = vec4(0);
         vec4 glow_color = vec4(0);

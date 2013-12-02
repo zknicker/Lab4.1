@@ -46,6 +46,7 @@
 #include "cylinder.h"
 #include "sphere.h"
 #include "torus.h"
+#include "plane.h"
 
 using namespace glm;
 using namespace std;
@@ -69,11 +70,15 @@ bool draw_shadows = false;
 bool draw_trackball = false;
 bool draw_bumpmap = true;
 bool draw_glow = true;
+bool draw_star = false;
 
 /* Object in the scene. */
 Cube *wallCube;
 Sphere *trackballSphere;
 Torus *bumpedTorus;
+Sphere *sun;
+Plane *sun_corona;
+Plane *sun_halo;
 vector<Sphere *> rotating_spheres;
 
 /* Scene animation variable representing stage in animation. */
@@ -81,6 +86,7 @@ float anim;
 
 /* Trackball vars 
    Attribution: http://nehe.gamedev.net/tutorial/arcball_rotation/19003/ */
+mat4 trackball_rotation;
 GLUquadricObj *quadratic;
 
 const float PI2 = 2.0*3.1415926535f;
@@ -168,11 +174,90 @@ void drawEnvironment(stack<mat4> *model_stack) {
 	model_stack->pop();
 }
 
+// Warning! Hacks ahead! :o
+float star_anim = 0;
+void drawStar(stack<mat4> *model_stack) {
+	star_anim += .0009;
+
+	scene.camera_pos = glm::vec3(0.1 * sin(star_anim), 0.1 * sin(star_anim), -9.0);
+	vec3 center = vec3(0, 0, 0);
+	vec3 up = vec3(0, 1, 0);
+
+    // Setup Model, View, and Projection matrices.
+	scene.projection = glm::perspective(60.0f, 4.0f / 3.0f, 0.1f, 100.0f);
+	scene.view = glm::lookAt(scene.camera_pos, center, up);
+
+	scene.star_shader.shade_corona = 0;
+	scene.star_shader.shade_halo = 0;
+	scene.star_shader.time = star_anim;
+	scene.star_shader.spectral_lookup = 0.0 + abs(0.06f * sin(star_anim * .005f));
+
+	// Sun
+	scene.model = model_stack->top();
+	scene.model = glm::scale(scene.model, vec3(5.0, 5.0, 5.0));
+	glEnable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0 + 10);
+	glBindTexture(GL_TEXTURE_2D, scene.sun_surface.id);
+	glEnable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0 + 11);
+	glBindTexture(GL_TEXTURE_2D, scene.star_colorshift.id);
+	glEnable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0 + 12);
+	glBindTexture(GL_TEXTURE_2D, scene.star_colorgraph.id);
+	sun->draw(&scene, STAR_SHADER);
+	
+	model_stack->push(scene.model);
+
+	// Corona
+	scene.star_shader.shade_corona = 1;
+	scene.model = inverse(trackball_rotation) * scene.model;
+	scene.model = glm::translate(scene.model, vec3(0.0, 0.1, -0.50));
+	scene.model = glm::scale(scene.model, vec3(2.0, 2.0, 2.0));
+	scene.model = glm::rotate(scene.model, 135.0f, vec3(1.0, 0.0, 0.0));
+
+	glDisable(GL_DEPTH);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+
+	glEnable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0 + 10);
+	glBindTexture(GL_TEXTURE_2D, scene.corona.id);
+	glActiveTexture(GL_TEXTURE0 + 12);
+	glBindTexture(GL_TEXTURE_2D, scene.star_colorgraph.id);
+	sun_corona->draw(&scene, STAR_SHADER);
+
+	scene.star_shader.shade_corona = 0;
+
+	// Halo
+	scene.model = model_stack->top();
+	model_stack->pop();
+	scene.model = inverse(trackball_rotation) * scene.model;
+	scene.model = glm::translate(scene.model, vec3(0.0, 0.1, -0.55));
+	scene.model = glm::scale(scene.model, vec3(0.6, 0.45, 0.6));
+	scene.model = glm::rotate(scene.model, 135.0f, vec3(1.0, 0.0, 0.0));
+	scene.star_shader.shade_halo = 1;
+
+	glEnable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0 + 10);
+	glBindTexture(GL_TEXTURE_2D, scene.sun_halo.id);
+	glEnable(GL_TEXTURE_2D);
+	glActiveTexture(GL_TEXTURE0 + 11);
+	glBindTexture(GL_TEXTURE_2D, scene.halo_colorshift.id);
+	glActiveTexture(GL_TEXTURE0 + 12);
+	glBindTexture(GL_TEXTURE_2D, scene.star_colorgraph.id);
+	sun_halo->draw(&scene, STAR_SHADER);
+
+	glDisable(GL_BLEND);
+	glEnable(GL_DEPTH);
+	scene.star_shader.shade_halo = 0;
+
+}
+
 /* Main animation function. Draws the screen.
  * -------------------------------------------------------------------------- */
 void display(void) {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
 
 	glUseProgram(scene.phong_shader.program);
@@ -196,7 +281,7 @@ void display(void) {
 
 	// Draw trackball rotation.
 	//scene.model = scene.model * trackball_rot;
-	mat4 trackball_rotation = mat4(
+	trackball_rotation = mat4(
 		Transform.M[0], Transform.M[1], Transform.M[2], Transform.M[3],
 		Transform.M[4], Transform.M[5], Transform.M[6], Transform.M[7],
 		Transform.M[8], Transform.M[9], Transform.M[10], Transform.M[11],
@@ -221,62 +306,66 @@ void display(void) {
 	drawEnvironment(&model_stack);
 	scene.model = model_stack.top();
     
-	// Global transform all objects.
-	scene.model = glm::translate(scene.model, vec3(0.0, 0.0, 0.0));
-	model_stack.push(scene.model);
+	if (draw_star) {
+		drawStar(&model_stack);
+	} else {
+		// Global transform all objects.
+		scene.model = glm::translate(scene.model, vec3(0.0, 0.0, 0.0));
+		model_stack.push(scene.model);
 
-	// Draw wireframes?
-	if (draw_wireframes) glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
+		// Draw wireframes?
+		if (draw_wireframes) glPolygonMode( GL_FRONT_AND_BACK, GL_LINE );
 
-    scene.model = glm::rotate(scene.model, -15.0f, vec3(1.0, 0.0, 0.0));
-    model_stack.push(scene.model);
+		scene.model = glm::rotate(scene.model, -15.0f, vec3(1.0, 0.0, 0.0));
+		model_stack.push(scene.model);
     
-    // Draw spheres.
-	scene.model = model_stack.top();
-	glActiveTexture(GL_TEXTURE0 + 2);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, scene.phong_shader.cubemap_texture);
-    for (int i = 0; i < rotating_spheres.size(); i++) {
-        float r = 5;
-        float variance = i * 360.0 / rotating_spheres.size();
-        float x = 2 * r * sin(anim + variance);
-        float z = 0.0;
-        float y = r * sin(2 * anim + variance);
-        float s = 1.0 + i / rotating_spheres.size() * 2.0;
-        glm::scale(scene.model, vec3(s, s, s));
-        scene.model = glm::rotate(scene.model, variance, vec3(0.0, 1.0, 0.0));
-        scene.model = glm::translate(scene.model, vec3(x, y, z));
-        rotating_spheres[i]->draw(&scene, PHONG_SHADER);
-        scene.model = model_stack.top();
-    }
+		// Draw spheres.
+		scene.model = model_stack.top();
+		glActiveTexture(GL_TEXTURE0 + 2);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, scene.phong_shader.cubemap_texture);
+		for (int i = 0; i < rotating_spheres.size(); i++) {
+			float r = 5;
+			float variance = i * 360.0 / rotating_spheres.size();
+			float x = 2 * r * sin(anim + variance);
+			float z = 0.0;
+			float y = r * sin(2 * anim + variance);
+			float s = 1.0 + i / rotating_spheres.size() * 2.0;
+			glm::scale(scene.model, vec3(s, s, s));
+			scene.model = glm::rotate(scene.model, variance, vec3(0.0, 1.0, 0.0));
+			scene.model = glm::translate(scene.model, vec3(x, y, z));
+			rotating_spheres[i]->draw(&scene, PHONG_SHADER);
+			scene.model = model_stack.top();
+		}
     
-    scene.model = model_stack.top();
+		scene.model = model_stack.top();
     
-    // Draw torus.
-    glEnable(GL_TEXTURE_2D);
-	glActiveTexture(GL_TEXTURE0 + 0);
-	glBindTexture(GL_TEXTURE_2D, scene.bumpmap_texture.id);
-	glEnable(GL_TEXTURE_2D);
-	glActiveTexture(GL_TEXTURE0 + 1);
-	glBindTexture(GL_TEXTURE_2D, scene.bumpmap_gradients_texture.id);
-    scene.model = glm::rotate(scene.model, 90.0f, vec3(1.0, 0.0, 0.0));
-    if (draw_bumpmap) {
-        bumpedTorus->draw(&scene, BUMPMAP_SHADER);
-    } else {
-        if (draw_glow) {
-            glEnable(GL_TEXTURE_2D);
-            glActiveTexture(GL_TEXTURE0 + 0);
-            bumpedTorus->setTexture(scene.phong_shader.cubemap_textures[3]);
-            bumpedTorus->setUseTextureGlow(1);
-            bumpedTorus->setTextureGlowPower(abs(sin(anim * 8)));
-        } else {
-            glEnable(GL_TEXTURE_2D);
-            glActiveTexture(GL_TEXTURE0 + 0);
-            bumpedTorus->setTexture(scene.bumpmap_texture.id);
-            bumpedTorus->setUseTextureGlow(0);
-        }
-        bumpedTorus->draw(&scene, PHONG_SHADER);
-    }
-    
+		// Draw torus.
+		glEnable(GL_TEXTURE_2D);
+		glActiveTexture(GL_TEXTURE0 + 0);
+		glBindTexture(GL_TEXTURE_2D, scene.bumpmap_texture.id);
+		glEnable(GL_TEXTURE_2D);
+		glActiveTexture(GL_TEXTURE0 + 1);
+		glBindTexture(GL_TEXTURE_2D, scene.bumpmap_gradients_texture.id);
+		scene.model = glm::rotate(scene.model, 90.0f, vec3(1.0, 0.0, 0.0));
+		if (draw_bumpmap) {
+			bumpedTorus->draw(&scene, BUMPMAP_SHADER);
+		} else {
+			if (draw_glow) {
+				glEnable(GL_TEXTURE_2D);
+				glActiveTexture(GL_TEXTURE0 + 0);
+				bumpedTorus->setTexture(scene.phong_shader.cubemap_textures[3]);
+				bumpedTorus->setUseTextureGlow(1);
+				bumpedTorus->setTextureGlowPower(abs(sin(anim * 8)));
+			} else {
+				glEnable(GL_TEXTURE_2D);
+				glActiveTexture(GL_TEXTURE0 + 0);
+				bumpedTorus->setTexture(scene.bumpmap_texture.id);
+				bumpedTorus->setUseTextureGlow(0);
+			}
+			bumpedTorus->draw(&scene, PHONG_SHADER);
+		}
+	}
+
 	// Reset wireframe?
 	if (draw_wireframes) glPolygonMode( GL_FRONT_AND_BACK, GL_FILL );
 
@@ -343,6 +432,10 @@ void keyboardController(unsigned char key, int x, int y)
     
     if (key == 'g' || key == 'G') {
         draw_glow = !draw_glow;
+    }
+	
+    if (key == 's' || key == 'S') {
+        draw_star = !draw_star;
     }
 }
 
@@ -414,6 +507,33 @@ void idleController() {
 	glutPostRedisplay();
 }
 
+void loadStarTexture(Texture *texture, char *ppm, GLuint tex_num) {
+	glGenTextures(1, &texture->id);
+	readTexture(texture, ppm);
+
+	glActiveTexture(GL_TEXTURE0 + tex_num);
+	glBindTexture(GL_TEXTURE_2D, texture->id);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texture->width, texture->height, 0, GL_RGBA, GL_UNSIGNED_BYTE, &texture->image[0]);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	cout << "Successfully loaded " << ppm << ".\n";
+}
+
+void loadStarTextures() {
+	// Setup texture uniforms.
+	glEnable(GL_TEXTURE_2D);
+	glUseProgram(scene.star_shader.program);
+
+	loadStarTexture(&scene.sun_surface, "sun_surface.ppm", 10); 
+	loadStarTexture(&scene.corona, "corona.ppm", 10); 
+	loadStarTexture(&scene.sun_halo, "sun_halo.ppm", 10); 
+	loadStarTexture(&scene.star_colorshift, "star_colorshift.ppm", 11); 
+	loadStarTexture(&scene.halo_colorshift, "halo_colorshift.ppm", 11); 
+	loadStarTexture(&scene.star_colorgraph, "star_colorgraph.ppm", 12); 
+}
+
 int main(int argc, char **argv) {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DEPTH | GLUT_DOUBLE | GLUT_RGBA | GLUT_ALPHA | GLUT_STENCIL);
@@ -449,6 +569,8 @@ int main(int argc, char **argv) {
 	setupShadowShader(&scene.shadow_shader);
 	cout << "Initializing bump mapping shader... ";
 	setupBumpMapShader(&scene.bumpmap_shader);
+	cout << "Initializing star shader... ";
+	setupStarShader(&scene.star_shader);
 
 	// Setup bumpmap textures.
 	cout << "Reading bumpmap texture.\n";
@@ -475,6 +597,18 @@ int main(int argc, char **argv) {
 	bumpedTorus->setLightTexture(1);
 	bumpedTorus->setReflectCubemap(0);
     
+	sun = new Sphere();
+	sun->setUseTexture(1);
+	sun->setLightTexture(0);
+
+	sun_corona = new Plane();
+	sun_corona->setUseTexture(1);
+	sun_corona->setLightTexture(0);
+
+	sun_halo = new Plane();
+	sun_halo->setUseTexture(1);
+	sun_halo->setLightTexture(0);
+
     rotating_spheres.resize(30);
     for (int i = 0; i < rotating_spheres.size(); i++) {
         rotating_spheres[i] = new Sphere();
@@ -487,6 +621,9 @@ int main(int argc, char **argv) {
         rotating_spheres[i]->setSpecularPower(20);
     }
     
+	// Load star textures.
+	loadStarTextures();
+
 	// Load CubeMap textures.
 	cout << "Loading the 6 cubemap textures.\n";
 	loadCubeMap();

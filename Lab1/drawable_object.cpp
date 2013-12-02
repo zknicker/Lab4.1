@@ -130,6 +130,14 @@ void DrawableObject::draw(Scene *scene, int shader) {
 		glUniform3f(scene->bumpmap_shader.specularMatId, specular[0], specular[1], specular[2]);
 		glUniform1f(scene->bumpmap_shader.specularPowerId, specular_power);
 		updateBumpMapShader(scene);
+	} else if (shader == STAR_SHADER) {
+		program = scene->star_shader.program;
+		glUseProgram(program);
+		glUniform1f(scene->star_shader.spectral_lookup_id, scene->star_shader.spectral_lookup);
+		glUniform1f(scene->star_shader.time_id, scene->star_shader.time);
+		glUniform1i(scene->star_shader.shade_corona_id, scene->star_shader.shade_corona);
+		glUniform1i(scene->star_shader.shade_halo_id, scene->star_shader.shade_halo);
+		updateStarShader(scene);
 	} else {
         cout << "Fatal error: invalid shader specified while drawing object.";
         exit(1);

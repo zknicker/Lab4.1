@@ -9,6 +9,7 @@
 #define SHADOW_SHADER 1
 #define PICKER_SHADER 2
 #define BUMPMAP_SHADER 3
+#define STAR_SHADER 4
 
 typedef struct {
 	GLuint program;
@@ -38,6 +39,32 @@ typedef struct {
     GLuint glow_id;
 	GLuint tex_sampler;
 } PhongShader;
+
+typedef struct {
+	GLuint program;
+
+	// Shader vars.
+	GLuint lightId;
+	GLuint cameraPosId;
+	GLuint modelId;
+	GLuint viewId;
+	GLuint projectionId;
+	GLuint normalId;
+
+	GLuint spectral_lookup_id;
+	GLuint time_id;
+	GLuint shade_corona_id;
+	GLuint shade_halo_id;
+
+	float spectral_lookup;
+	float time;
+	GLuint shade_corona;
+	GLuint shade_halo;
+
+	GLuint tex_primary;
+	GLuint tex_color;
+	GLuint tex_spectral;
+} StarShader;
 
 typedef struct {
 	GLuint program;
@@ -117,6 +144,7 @@ typedef struct {
 
 typedef struct {
 	PhongShader phong_shader;
+	StarShader star_shader;
 	ShadowShader shadow_shader;
 	BumpMapShader bumpmap_shader;
 	PickingShader picking_shader;
@@ -142,6 +170,14 @@ typedef struct {
 	Texture cubemap_position_z;
 	Texture cubemap_negative_z;
 
+	// Star Texture
+	Texture sun_surface;
+	Texture sun_halo;
+	Texture star_colorshift;
+	Texture halo_colorshift;
+	Texture star_colorgraph;
+	Texture corona;
+
 	// Mapping of object model transformations to id (i.e. index in vector).
 	// The object's index maps to a color such that it can be "picked" by the
 	// mouse, and the associated model matrix is then used to reposition the
@@ -165,6 +201,11 @@ GLuint setupShaders(char *shader_name);
  * -------------------------------------------------------------------------- */
 void setupPhongShader(PhongShader* phong_shader);
 
+/* Quick and easy method to initialize a star shader. Takes care of 
+ * binding the program and getting uniform locations.
+ * -------------------------------------------------------------------------- */
+void setupStarShader(StarShader* star_shader);
+
 /* Quick and easy method to initialize a shadow shader. Takes care of 
  * binding the program and getting uniform locations.
  * -------------------------------------------------------------------------- */
@@ -183,6 +224,10 @@ void setupPickingShader(PickingShader* picking_shader);
 /* Updates simple uniforms in the phong shader.
  * -------------------------------------------------------------------------- */
 void updatePhongShader(Scene *scene);
+
+/* Updates simple uniforms in the star shader.
+ * -------------------------------------------------------------------------- */
+void updateStarShader(Scene *scene);
 
 /* Updates simple uniforms in the shadow shader.
  * -------------------------------------------------------------------------- */
